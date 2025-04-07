@@ -45,7 +45,7 @@
         android:layout_marginBottom="8dp" />
 
     <CheckBox
-        android:id="@+id/cbIsRecommend"
+        android:id="@+id/cbIsRecommended"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Đề xuất"

@@ -54,7 +54,7 @@ class AlbumSongsActivity : AppCompatActivity() {
                             url = songJson.optString("url", null),
                             quality = songJson.optString("quality", null),
                             trendingScore = if (songJson.isNull("trending_score")) null else songJson.optInt("trending_score", 0),
-                            isRecommend = if (songJson.isNull("is_recommend")) null else songJson.optInt("is_recommend", 0) == 1,
+                            isRecommended = if (songJson.isNull("is_recommended")) null else songJson.optInt("is_recommend", 0) == 1,
                             thumbnailUrl = songJson.optString("thumbnail_url", null),
                             albumId = if (songJson.isNull("album_id")) null else songJson.optInt("album_id", 0),
                             lyrics = songJson.optString("lyrics", null)

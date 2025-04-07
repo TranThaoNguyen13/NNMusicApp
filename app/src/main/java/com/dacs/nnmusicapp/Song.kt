@@ -10,7 +10,7 @@ data class Song(
     val url: String?,
     val quality: String?,
     val trendingScore: Int?, // Thêm trường trending_score
-    val isRecommend: Boolean?, // Thêm trường is_recommend
+    val isRecommended: Boolean?, // Thêm trường is_recommend
     val thumbnailUrl: String?,
     val albumId: Int?,
     val lyrics: String?
@@ -22,7 +22,7 @@ data class Song(
         url = parcel.readString(),
         quality = parcel.readString(),
         trendingScore = parcel.readInt().let { if (it == -1) null else it }, // Đọc trending_score
-        isRecommend = parcel.readByte().let { if (it == 0.toByte()) null else it == 1.toByte() }, // Đọc is_recommend
+        isRecommended = parcel.readByte().let { if (it == 0.toByte()) null else it == 1.toByte() }, // Đọc is_recommend
         thumbnailUrl = parcel.readString(),
         albumId = parcel.readInt().let { if (it == -1) null else it }, // Đọc albumId
         lyrics = parcel.readString()
@@ -35,7 +35,7 @@ data class Song(
         parcel.writeString(url)
         parcel.writeString(quality)
         parcel.writeInt(trendingScore ?: -1) // Ghi trending_score, -1 nếu null
-        parcel.writeByte((if (isRecommend == null) 0 else if (isRecommend) 1 else 2).toByte()) // Ghi is_recommend
+        parcel.writeByte((if (isRecommended == null) 0 else if (isRecommended) 1 else 2).toByte()) // Ghi is_recommend
         parcel.writeString(thumbnailUrl)
         parcel.writeInt(albumId ?: -1) // Ghi albumId, -1 nếu null
         parcel.writeString(lyrics)

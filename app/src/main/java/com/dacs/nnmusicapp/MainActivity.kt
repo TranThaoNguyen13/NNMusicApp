@@ -7,30 +7,36 @@ import android.os.Handler
 import android.os.Looper
 import android.util.Log
 import android.widget.Button
-import android.widget.ImageView
-import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.SearchView
 import androidx.recyclerview.widget.LinearLayoutManager
-import androidx.recyclerview.widget.RecyclerView
 import androidx.viewpager2.widget.ViewPager2
 import com.android.volley.Request
 import com.android.volley.RequestQueue
 import com.android.volley.toolbox.JsonArrayRequest
+import com.android.volley.toolbox.StringRequest
 import com.android.volley.toolbox.Volley
-import com.bumptech.glide.Glide
+import com.dacs.nnmusicapp.AlbumAdapter
+import com.dacs.nnmusicapp.SongAdapter
+import com.dacs.nnmusicapp.SliderAdapter
+import com.dacs.nnmusicapp.adapters.TrendingSongAdapter
+import com.dacs.nnmusicapp.databinding.ActivityMainBinding
+import com.dacs.nnmusicapp.Album
+import com.dacs.nnmusicapp.Song
 import org.json.JSONException
+import org.json.JSONObject
 
 class MainActivity : AppCompatActivity() {
 
+    private lateinit var binding: ActivityMainBinding
     private lateinit var viewPager: ViewPager2
-    private lateinit var rvAlbums: RecyclerView
-    private lateinit var rvRecommendations: RecyclerView
     private lateinit var btnAuth: Button
     private lateinit var requestQueue: RequestQueue
     private lateinit var albumAdapter: AlbumAdapter
     private var isLoggedIn = false
+    private val trendingSongs = mutableListOf<Song>()
+    private lateinit var trendingSongAdapter: TrendingSongAdapter
 
     private val sliderImages = listOf(
         "https://i.imgur.com/stW72UJ.png",
@@ -53,19 +59,42 @@ class MainActivity : AppCompatActivity() {
             return
         }
 
-        setContentView(R.layout.activity_main)
+        binding = ActivityMainBinding.inflate(layoutInflater)
+        setContentView(binding.root)
 
         try {
             // Ánh xạ các thành phần
-            btnAuth = findViewById(R.id.btnAuth)
-            viewPager = findViewById(R.id.viewPager)
-            rvAlbums = findViewById(R.id.rvAlbums)
-            rvRecommendations = findViewById(R.id.rvRecommendations)
-            val searchView = findViewById<SearchView>(R.id.searchView)
+            btnAuth = binding.btnAuth
+            viewPager = binding.viewPager
+            binding.rvAlbums.layoutManager = LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false)
+            binding.rvRecommendations.layoutManager = LinearLayoutManager(this)
+
+            // Thiết lập RecyclerView cho danh sách trending
+            binding.rvTrendingSongs.layoutManager = LinearLayoutManager(this)
+            trendingSongAdapter = TrendingSongAdapter(trendingSongs) { song ->
+                if (isLoggedIn) {
+                    Log.d("MainActivity", "Song URL before passing to SongActivity: ${song.url}")
+                    if (song.url.isNullOrEmpty()) {
+                        Toast.makeText(this, "Không tìm thấy URL bài hát", Toast.LENGTH_SHORT).show()
+                    } else {
+                        val intent = Intent(this, SongActivity::class.java).apply {
+                            putExtra("song_title", song.title)
+                            putExtra("song_artist", song.artist)
+                            putExtra("song_url", song.url)
+                            putExtra("song_thumbnail", song.thumbnailUrl)
+                            putExtra("song_lyrics", song.lyrics)
+                        }
+                        startActivity(intent)
+                    }
+                } else {
+                    Toast.makeText(this, "Vui lòng đăng nhập để nghe nhạc", Toast.LENGTH_SHORT).show()
+                    startActivity(Intent(this, LoginActivity::class.java))
+                }
+            }
+            binding.rvTrendingSongs.adapter = trendingSongAdapter
 
             // Thiết lập Toolbar
-            val toolbar = findViewById<androidx.appcompat.widget.Toolbar>(R.id.toolbar)
-            setSupportActionBar(toolbar)
+            setSupportActionBar(binding.toolbar)
 
             // Cập nhật trạng thái nút đăng nhập/đăng xuất
             updateAuthButton()
@@ -73,16 +102,12 @@ class MainActivity : AppCompatActivity() {
             // Thiết lập ViewPager2 cho slider
             setupSlider()
 
-            // Thiết lập RecyclerView cho album và gợi ý
-            rvAlbums.layoutManager = LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false)
-            rvRecommendations.layoutManager = LinearLayoutManager(this)
-
             // Khởi tạo Volley RequestQueue
             requestQueue = Volley.newRequestQueue(this)
 
             // Gọi API
             fetchAlbums()
-            fetchTopTrending()
+            fetchTrendingSongs()
             fetchRecommendations()
 
             // Xử lý nút đăng nhập/đăng xuất
@@ -105,7 +130,7 @@ class MainActivity : AppCompatActivity() {
             }
 
             // Xử lý SearchView
-            searchView?.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
+            binding.searchView.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
                 override fun onQueryTextSubmit(query: String?): Boolean {
                     Toast.makeText(this@MainActivity, "Tìm kiếm: $query", Toast.LENGTH_SHORT).show()
                     return true
@@ -176,7 +201,7 @@ class MainActivity : AppCompatActivity() {
                         }
                         startActivity(intent)
                     }
-                    rvAlbums.adapter = albumAdapter
+                    binding.rvAlbums.adapter = albumAdapter
                 } catch (e: JSONException) {
                     Log.e("MainActivity", "JSON parsing error: ${e.message}")
                     Toast.makeText(this, "Error parsing albums", Toast.LENGTH_LONG).show()
@@ -190,67 +215,51 @@ class MainActivity : AppCompatActivity() {
 
         requestQueue.add(request)
     }
-    private fun fetchTopTrending() {
-        val url = "http://10.0.2.2/nnmusicapp_api/api.php?action=top_trending"
-        val jsonArrayRequest = JsonArrayRequest(
-            Request.Method.GET, url, null,
-            { response ->
-                if (response.length() > 0) {
-                    try {
-                        val jsonObject = response.getJSONObject(0)
-                        val song = Song(
-                            id = jsonObject.getInt("id"),
-                            title = jsonObject.getString("title"),
-                            artist = jsonObject.getString("artist"),
-                            url = jsonObject.optString("url", null),
-                            quality = jsonObject.optString("quality", null),
-                            trendingScore = if (jsonObject.isNull("trending_score")) null else jsonObject.optInt("trending_score", 0),
-                            isRecommend = if (jsonObject.isNull("is_recommend")) null else jsonObject.optInt("is_recommend", 0) == 1,
-                            thumbnailUrl = jsonObject.optString("thumbnail_url", null),
-                            albumId = if (jsonObject.isNull("album_id")) null else jsonObject.optInt("album_id", 0),
-                            lyrics = jsonObject.optString("lyrics", null)
-                        )
-                        findViewById<TextView>(R.id.tvTopTrendingTitleSong)?.text = song.title
-                        findViewById<TextView>(R.id.tvTopTrendingArtist)?.text = song.artist
-                        Glide.with(this)
-                            .load(song.thumbnailUrl)
-                            .placeholder(R.drawable.ic_launcher_background)
-                            .error(R.drawable.ic_launcher_foreground)
-                            .into(findViewById<ImageView>(R.id.ivTopTrendingThumbnail))
 
-                        findViewById<ImageView>(R.id.ivTopTrendingThumbnail)?.setOnClickListener {
-                            if (isLoggedIn) {
-                                Log.d("MainActivity", "Song URL before passing to SongActivity: ${song.url}")
-                                if (song.url.isNullOrEmpty()) {
-                                    Toast.makeText(this, "Không tìm thấy URL bài hát", Toast.LENGTH_SHORT).show()
-                                } else {
-                                    val intent = Intent(this, SongActivity::class.java).apply {
-                                        putExtra("song_title", song.title)
-                                        putExtra("song_artist", song.artist)
-                                        putExtra("song_url", song.url)
-                                        putExtra("song_thumbnail", song.thumbnailUrl)
-                                        putExtra("song_lyrics", song.lyrics)
-                                    }
-                                    startActivity(intent)
-                                }
-                            } else {
-                                Toast.makeText(this, "Vui lòng đăng nhập để nghe nhạc", Toast.LENGTH_SHORT).show()
-                                startActivity(Intent(this, LoginActivity::class.java))
-                            }
+    private fun fetchTrendingSongs() {
+        val url = "http://10.0.2.2/nnmusicapp_api/songs.php?action=get_trending_songs"
+        val request = StringRequest(
+            Request.Method.GET, url,
+            { response ->
+                Log.d("MainActivity", "API Response: $response")
+                try {
+                    if (response.trim().startsWith("[")) {
+                        val jsonArray = org.json.JSONArray(response)
+                        trendingSongs.clear()
+                        for (i in 0 until jsonArray.length()) {
+                            val jsonObject = jsonArray.getJSONObject(i)
+                            val song = Song(
+                                id = jsonObject.getInt("id"),
+                                title = jsonObject.getString("title"),
+                                artist = jsonObject.getString("artist"),
+                                url = jsonObject.optString("url", null),
+                                quality = jsonObject.optString("quality", null),
+                                trendingScore = if (jsonObject.isNull("trending_score")) null else jsonObject.optInt("trending_score", 0),
+                                isRecommended = if (jsonObject.isNull("is_recommended")) null else jsonObject.optInt("is_recommended", 0) == 1,
+                                thumbnailUrl = jsonObject.optString("thumbnail_url", null),
+                                albumId = if (jsonObject.isNull("album_id")) null else jsonObject.optInt("album_id", 0),
+                                lyrics = jsonObject.optString("lyrics", null)
+                            )
+                            trendingSongs.add(song)
                         }
-                    } catch (e: JSONException) {
-                        e.printStackTrace()
-                        Toast.makeText(this, "Lỗi phân tích dữ liệu Top 1 Trending", Toast.LENGTH_SHORT).show()
+                        trendingSongAdapter.notifyDataSetChanged()
+                    } else {
+                        val jsonObject = JSONObject(response)
+                        if (jsonObject.has("status") && jsonObject.getString("status") == "error") {
+                            Toast.makeText(this, "Lỗi từ API: ${jsonObject.getString("message")}", Toast.LENGTH_LONG).show()
+                        }
                     }
-                } else {
-                    Toast.makeText(this, "Không có dữ liệu Top 1 Trending", Toast.LENGTH_SHORT).show()
+                } catch (e: Exception) {
+                    Log.e("MainActivity", "Error parsing response: ${e.message}")
+                    Toast.makeText(this, "Lỗi phân tích dữ liệu: ${e.message}", Toast.LENGTH_LONG).show()
                 }
             },
             { error ->
-                Toast.makeText(this, "Lỗi khi lấy Top 1 Trending: ${error.message}", Toast.LENGTH_LONG).show()
+                Log.e("MainActivity", "Error fetching trending songs: ${error.message}")
+                Toast.makeText(this, "Lỗi kết nối API: ${error.message}", Toast.LENGTH_LONG).show()
             }
         )
-        requestQueue.add(jsonArrayRequest)
+        requestQueue.add(request)
     }
 
     private fun fetchRecommendations() {
@@ -269,7 +278,7 @@ class MainActivity : AppCompatActivity() {
                             url = jsonObject.optString("url", null),
                             quality = jsonObject.optString("quality", null),
                             trendingScore = if (jsonObject.isNull("trending_score")) null else jsonObject.optInt("trending_score", 0),
-                            isRecommend = if (jsonObject.isNull("is_recommend")) null else jsonObject.optInt("is_recommend", 0) == 1,
+                            isRecommended = if (jsonObject.isNull("is_recommended")) null else jsonObject.optInt("is_recommended", 0) == 1,
                             thumbnailUrl = jsonObject.optString("thumbnail_url", null),
                             albumId = if (jsonObject.isNull("album_id")) null else jsonObject.optInt("album_id", 0),
                             lyrics = jsonObject.optString("lyrics", null)
@@ -280,7 +289,7 @@ class MainActivity : AppCompatActivity() {
                         Toast.makeText(this, "Lỗi phân tích dữ liệu gợi ý", Toast.LENGTH_SHORT).show()
                     }
                 }
-                rvRecommendations.adapter = SongAdapter(
+                binding.rvRecommendations.adapter = SongAdapter(
                     songs = songs,
                     onSongClick = { selectedSong ->
                         if (isLoggedIn) {

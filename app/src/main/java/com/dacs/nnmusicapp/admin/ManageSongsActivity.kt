@@ -11,9 +11,9 @@ import android.widget.EditText
 import android.widget.Spinner
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
-import androidx.recyclerview.widget.LinearLayoutManager // Thêm import cho LinearLayoutManager
+import androidx.recyclerview.widget.LinearLayoutManager
 import com.android.volley.Request
-import com.android.volley.RequestQueue // Thêm import cho RequestQueue
+import com.android.volley.RequestQueue
 import com.android.volley.toolbox.StringRequest
 import com.android.volley.toolbox.Volley
 import com.dacs.nnmusicapp.R
@@ -27,7 +27,7 @@ class ManageSongsActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityManageSongsBinding
     private lateinit var songAdapter: SongAdapter
-    private lateinit var requestQueue: RequestQueue // Thêm RequestQueue
+    private lateinit var requestQueue: RequestQueue
     private val songs = mutableListOf<Song>()
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -86,7 +86,7 @@ class ManageSongsActivity : AppCompatActivity() {
                             url = if (songJson.isNull("url")) null else songJson.getString("url"),
                             quality = if (songJson.isNull("quality")) null else songJson.getString("quality"),
                             trendingScore = if (songJson.isNull("trending_score")) null else songJson.getInt("trending_score"),
-                            isRecommend = if (songJson.isNull("is_recommend")) null else songJson.getInt("is_recommend") == 1,
+                            isRecommended = if (songJson.isNull("is_recommended")) null else songJson.getInt("is_recommended") == 1,
                             thumbnailUrl = if (songJson.isNull("thumbnail_url")) null else songJson.getString("thumbnail_url"),
                             albumId = if (songJson.isNull("album_id")) null else songJson.getInt("album_id"),
                             lyrics = if (songJson.isNull("lyrics")) null else songJson.getString("lyrics")
@@ -110,7 +110,7 @@ class ManageSongsActivity : AppCompatActivity() {
                 Toast.makeText(this, "Lỗi kết nối API: ${error.message}", Toast.LENGTH_LONG).show()
             }
         )
-        requestQueue.add(request) // Sử dụng requestQueue
+        requestQueue.add(request)
     }
 
     private fun showAddSongDialog() {
@@ -124,7 +124,7 @@ class ManageSongsActivity : AppCompatActivity() {
         val etArtist = dialogView.findViewById<EditText>(R.id.etArtist)
         val etUrl = dialogView.findViewById<EditText>(R.id.etUrl)
         val spinnerQuality = dialogView.findViewById<Spinner>(R.id.spinnerQuality)
-        val cbIsRecommend = dialogView.findViewById<CheckBox>(R.id.cbIsRecommend)
+        val cbIsRecommended = dialogView.findViewById<CheckBox>(R.id.cbIsRecommended)
         val etThumbnailUrl = dialogView.findViewById<EditText>(R.id.etThumbnailUrl)
         val etAlbumId = dialogView.findViewById<EditText>(R.id.etAlbumId)
         val etLyrics = dialogView.findViewById<EditText>(R.id.etLyrics)
@@ -141,17 +141,17 @@ class ManageSongsActivity : AppCompatActivity() {
             val artist = etArtist.text.toString().trim()
             val url = etUrl.text.toString().trim().ifEmpty { null }
             val quality = spinnerQuality.selectedItem.toString()
-            val isRecommend = cbIsRecommend.isChecked
+            val isRecommended = cbIsRecommended.isChecked // Sửa isRecommend thành isRecommended
             val thumbnailUrl = etThumbnailUrl.text.toString().trim().ifEmpty { null }
             val albumId = etAlbumId.text.toString().trim().toIntOrNull()
             val lyrics = etLyrics.text.toString().trim().ifEmpty { null }
 
-            if (title.isEmpty() || artist.isEmpty() || url == null) { // Kiểm tra url
+            if (title.isEmpty() || artist.isEmpty() || url == null) {
                 Toast.makeText(this, "Vui lòng nhập đầy đủ thông tin (tên, ca sĩ, URL)", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
 
-            addSong(title, artist, url, quality, isRecommend, thumbnailUrl, albumId, lyrics) {
+            addSong(title, artist, url, quality, isRecommended, thumbnailUrl, albumId, lyrics) {
                 dialog.dismiss()
                 fetchSongs()
             }
@@ -175,7 +175,7 @@ class ManageSongsActivity : AppCompatActivity() {
         val etArtist = dialogView.findViewById<EditText>(R.id.etArtist)
         val etUrl = dialogView.findViewById<EditText>(R.id.etUrl)
         val spinnerQuality = dialogView.findViewById<Spinner>(R.id.spinnerQuality)
-        val cbIsRecommend = dialogView.findViewById<CheckBox>(R.id.cbIsRecommend)
+        val cbIsRecommended = dialogView.findViewById<CheckBox>(R.id.cbIsRecommended)
         val etThumbnailUrl = dialogView.findViewById<EditText>(R.id.etThumbnailUrl)
         val etAlbumId = dialogView.findViewById<EditText>(R.id.etAlbumId)
         val etLyrics = dialogView.findViewById<EditText>(R.id.etLyrics)
@@ -188,7 +188,7 @@ class ManageSongsActivity : AppCompatActivity() {
         etThumbnailUrl.setText(song.thumbnailUrl)
         etAlbumId.setText(song.albumId?.toString())
         etLyrics.setText(song.lyrics)
-        cbIsRecommend.isChecked = song.isRecommend == true
+        cbIsRecommended.isChecked = song.isRecommended == true // Sửa isRecommend thành isRecommended
 
         val qualityLevels = resources.getStringArray(R.array.quality_levels)
         val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, qualityLevels)
@@ -201,17 +201,17 @@ class ManageSongsActivity : AppCompatActivity() {
             val artist = etArtist.text.toString().trim()
             val url = etUrl.text.toString().trim().ifEmpty { null }
             val quality = spinnerQuality.selectedItem.toString()
-            val isRecommend = cbIsRecommend.isChecked
+            val isRecommended = cbIsRecommended.isChecked // Sửa isRecommend thành isRecommended
             val thumbnailUrl = etThumbnailUrl.text.toString().trim().ifEmpty { null }
             val albumId = etAlbumId.text.toString().trim().toIntOrNull()
             val lyrics = etLyrics.text.toString().trim().ifEmpty { null }
 
-            if (title.isEmpty() || artist.isEmpty() || url == null) { // Kiểm tra url
+            if (title.isEmpty() || artist.isEmpty() || url == null) {
                 Toast.makeText(this, "Vui lòng nhập đầy đủ thông tin (tên, ca sĩ, URL)", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
 
-            updateSong(song.id, title, artist, url, quality, isRecommend, thumbnailUrl, albumId, lyrics) {
+            updateSong(song.id, title, artist, url, quality, isRecommended, thumbnailUrl, albumId, lyrics) {
                 dialog.dismiss()
                 fetchSongs()
             }
@@ -224,7 +224,17 @@ class ManageSongsActivity : AppCompatActivity() {
         dialog.show()
     }
 
-    private fun addSong(title: String, artist: String, url: String?, quality: String?, isRecommend: Boolean, thumbnailUrl: String?, albumId: Int?, lyrics: String?, onSuccess: () -> Unit) {
+    private fun addSong(
+        title: String,
+        artist: String,
+        url: String?,
+        quality: String?,
+        isRecommended: Boolean, // Sửa isRecommend thành isRecommended
+        thumbnailUrl: String?,
+        albumId: Int?,
+        lyrics: String?,
+        onSuccess: () -> Unit
+    ) {
         val urlApi = "http://10.0.2.2/nnmusicapp_api/songs.php?action=add_song"
         val request = object : StringRequest(
             Method.POST, urlApi,
@@ -253,7 +263,7 @@ class ManageSongsActivity : AppCompatActivity() {
                     put("artist", artist)
                     put("url", url)
                     put("quality", quality)
-                    put("is_recommend", if (isRecommend) 1 else 0)
+                    put("is_recommended", if (isRecommended) 1 else 0) // Tên tham số API vẫn là is_recommended
                     put("thumbnail_url", thumbnailUrl)
                     put("album_id", albumId)
                     put("lyrics", lyrics)
@@ -265,10 +275,21 @@ class ManageSongsActivity : AppCompatActivity() {
                 return "application/json"
             }
         }
-        requestQueue.add(request) // Sử dụng requestQueue
+        requestQueue.add(request)
     }
 
-    private fun updateSong(id: Int, title: String, artist: String, url: String?, quality: String?, isRecommend: Boolean, thumbnailUrl: String?, albumId: Int?, lyrics: String?, onSuccess: () -> Unit) {
+    private fun updateSong(
+        id: Int,
+        title: String,
+        artist: String,
+        url: String?,
+        quality: String?,
+        isRecommended: Boolean, // Sửa isRecommend thành isRecommended
+        thumbnailUrl: String?,
+        albumId: Int?,
+        lyrics: String?,
+        onSuccess: () -> Unit
+    ) {
         val urlApi = "http://10.0.2.2/nnmusicapp_api/songs.php?action=update_song"
         val request = object : StringRequest(
             Method.PUT, urlApi,
@@ -298,7 +319,7 @@ class ManageSongsActivity : AppCompatActivity() {
                     put("artist", artist)
                     put("url", url)
                     put("quality", quality)
-                    put("is_recommend", if (isRecommend) 1 else 0)
+                    put("is_recommended", if (isRecommended) 1 else 0) // Tên tham số API vẫn là is_recommended
                     put("thumbnail_url", thumbnailUrl)
                     put("album_id", albumId)
                     put("lyrics", lyrics)
@@ -310,7 +331,7 @@ class ManageSongsActivity : AppCompatActivity() {
                 return "application/json"
             }
         }
-        requestQueue.add(request) // Sử dụng requestQueue
+        requestQueue.add(request)
     }
 
     private fun deleteSong(song: Song) {
@@ -340,7 +361,7 @@ class ManageSongsActivity : AppCompatActivity() {
                         Toast.makeText(this, "Error deleting song: ${error.message}", Toast.LENGTH_LONG).show()
                     }
                 )
-                requestQueue.add(request) // Sử dụng requestQueue
+                requestQueue.add(request)
             }
             .setNegativeButton("Hủy", null)
             .show()
