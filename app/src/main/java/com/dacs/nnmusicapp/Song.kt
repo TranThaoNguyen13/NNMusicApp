@@ -9,9 +9,11 @@ data class Song(
     val artist: String,
     val url: String?,
     val quality: String?,
+    val trendingScore: Int?, // Thêm trường trending_score
+    val isRecommend: Boolean?, // Thêm trường is_recommend
     val thumbnailUrl: String?,
-    val albumId: Int,
-    val lyrics: String? // Thêm trường lyrics
+    val albumId: Int?,
+    val lyrics: String?
 ) : Parcelable {
     constructor(parcel: Parcel) : this(
         id = parcel.readInt(),
@@ -19,9 +21,11 @@ data class Song(
         artist = parcel.readString() ?: "",
         url = parcel.readString(),
         quality = parcel.readString(),
+        trendingScore = parcel.readInt().let { if (it == -1) null else it }, // Đọc trending_score
+        isRecommend = parcel.readByte().let { if (it == 0.toByte()) null else it == 1.toByte() }, // Đọc is_recommend
         thumbnailUrl = parcel.readString(),
-        albumId = parcel.readInt(),
-        lyrics = parcel.readString() // Đọc lyrics từ Parcel
+        albumId = parcel.readInt().let { if (it == -1) null else it }, // Đọc albumId
+        lyrics = parcel.readString()
     )
 
     override fun writeToParcel(parcel: Parcel, flags: Int) {
@@ -30,9 +34,11 @@ data class Song(
         parcel.writeString(artist)
         parcel.writeString(url)
         parcel.writeString(quality)
+        parcel.writeInt(trendingScore ?: -1) // Ghi trending_score, -1 nếu null
+        parcel.writeByte((if (isRecommend == null) 0 else if (isRecommend) 1 else 2).toByte()) // Ghi is_recommend
         parcel.writeString(thumbnailUrl)
-        parcel.writeInt(albumId)
-        parcel.writeString(lyrics) // Ghi lyrics vào Parcel
+        parcel.writeInt(albumId ?: -1) // Ghi albumId, -1 nếu null
+        parcel.writeString(lyrics)
     }
 
     override fun describeContents(): Int = 0

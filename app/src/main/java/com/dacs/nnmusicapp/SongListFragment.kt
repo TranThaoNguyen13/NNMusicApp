@@ -4,6 +4,7 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -28,16 +29,23 @@ class SongListFragment : Fragment() {
 
         if (songs.isEmpty()) {
             // Xử lý khi không có bài hát
+            Toast.makeText(requireContext(), "Không có bài hát để hiển thị", Toast.LENGTH_SHORT).show()
             return view
         }
 
-        songAdapter = SongAdapter(songs) { selectedSong ->
-            // Lấy activity chứa fragment (AlbumSongsActivity) và gọi navigateToPlayer
-            val activity = requireActivity()
-            if (activity is AlbumSongsActivity) {
-                activity.navigateToPlayer(selectedSong)
-            }
-        }
+        songAdapter = SongAdapter(
+            songs = songs,
+            onSongClick = { selectedSong ->
+                // Lấy activity chứa fragment (AlbumSongsActivity) và gọi navigateToPlayer
+                val activity = requireActivity()
+                if (activity is AlbumSongsActivity) {
+                    activity.navigateToPlayer(selectedSong)
+                }
+            },
+            onEditClick = { /* Không cần xử lý chỉnh sửa trong SongListFragment */ },
+            onDeleteClick = { /* Không cần xử lý xóa trong SongListFragment */ },
+            isManageMode = false
+        )
         recyclerView.adapter = songAdapter
 
         return view

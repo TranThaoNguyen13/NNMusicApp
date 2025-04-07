@@ -40,13 +40,22 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // Kiểm tra vai trò ngay khi khởi động
+        val sharedPreferences = getSharedPreferences("UserPrefs", Context.MODE_PRIVATE)
+        isLoggedIn = sharedPreferences.getBoolean("isLoggedIn", false)
+        val role = sharedPreferences.getString("role", "user") // Mặc định là "user" nếu không có role
+
+        // Nếu là admin, chuyển hướng đến AdminActivity
+        if (isLoggedIn && role == "admin") {
+            startActivity(Intent(this, AdminActivity::class.java))
+            finish()
+            return
+        }
+
         setContentView(R.layout.activity_main)
 
         try {
-            // Kiểm tra trạng thái đăng nhập
-            val sharedPreferences = getSharedPreferences("UserPrefs", Context.MODE_PRIVATE)
-            isLoggedIn = sharedPreferences.getBoolean("isLoggedIn", false)
-
             // Ánh xạ các thành phần
             btnAuth = findViewById(R.id.btnAuth)
             viewPager = findViewById(R.id.viewPager)
@@ -83,6 +92,7 @@ class MainActivity : AppCompatActivity() {
                     val sharedPreferences = getSharedPreferences("UserPrefs", Context.MODE_PRIVATE)
                     sharedPreferences.edit().apply {
                         putBoolean("isLoggedIn", false)
+                        putString("role", "user") // Reset role về user
                         apply()
                     }
                     isLoggedIn = false
@@ -180,7 +190,6 @@ class MainActivity : AppCompatActivity() {
 
         requestQueue.add(request)
     }
-
     private fun fetchTopTrending() {
         val url = "http://10.0.2.2/nnmusicapp_api/api.php?action=top_trending"
         val jsonArrayRequest = JsonArrayRequest(
@@ -195,9 +204,11 @@ class MainActivity : AppCompatActivity() {
                             artist = jsonObject.getString("artist"),
                             url = jsonObject.optString("url", null),
                             quality = jsonObject.optString("quality", null),
+                            trendingScore = if (jsonObject.isNull("trending_score")) null else jsonObject.optInt("trending_score", 0),
+                            isRecommend = if (jsonObject.isNull("is_recommend")) null else jsonObject.optInt("is_recommend", 0) == 1,
                             thumbnailUrl = jsonObject.optString("thumbnail_url", null),
-                            albumId = 0,
-                            lyrics = jsonObject.optString("lyrics", null) // Thêm lyrics
+                            albumId = if (jsonObject.isNull("album_id")) null else jsonObject.optInt("album_id", 0),
+                            lyrics = jsonObject.optString("lyrics", null)
                         )
                         findViewById<TextView>(R.id.tvTopTrendingTitleSong)?.text = song.title
                         findViewById<TextView>(R.id.tvTopTrendingArtist)?.text = song.artist
@@ -218,7 +229,7 @@ class MainActivity : AppCompatActivity() {
                                         putExtra("song_artist", song.artist)
                                         putExtra("song_url", song.url)
                                         putExtra("song_thumbnail", song.thumbnailUrl)
-                                        putExtra("song_lyrics", song.lyrics) // Truyền lyrics
+                                        putExtra("song_lyrics", song.lyrics)
                                     }
                                     startActivity(intent)
                                 }
@@ -257,9 +268,11 @@ class MainActivity : AppCompatActivity() {
                             artist = jsonObject.getString("artist"),
                             url = jsonObject.optString("url", null),
                             quality = jsonObject.optString("quality", null),
+                            trendingScore = if (jsonObject.isNull("trending_score")) null else jsonObject.optInt("trending_score", 0),
+                            isRecommend = if (jsonObject.isNull("is_recommend")) null else jsonObject.optInt("is_recommend", 0) == 1,
                             thumbnailUrl = jsonObject.optString("thumbnail_url", null),
-                            albumId = 0,
-                            lyrics = jsonObject.optString("lyrics", null) // Thêm lyrics
+                            albumId = if (jsonObject.isNull("album_id")) null else jsonObject.optInt("album_id", 0),
+                            lyrics = jsonObject.optString("lyrics", null)
                         )
                         songs.add(song)
                     } catch (e: JSONException) {
@@ -267,26 +280,32 @@ class MainActivity : AppCompatActivity() {
                         Toast.makeText(this, "Lỗi phân tích dữ liệu gợi ý", Toast.LENGTH_SHORT).show()
                     }
                 }
-                rvRecommendations.adapter = SongAdapter(songs) { selectedSong ->
-                    if (isLoggedIn) {
-                        Log.d("MainActivity", "Song URL before passing to SongActivity: ${selectedSong.url}")
-                        if (selectedSong.url.isNullOrEmpty()) {
-                            Toast.makeText(this, "Không tìm thấy URL bài hát", Toast.LENGTH_SHORT).show()
-                        } else {
-                            val intent = Intent(this, SongActivity::class.java).apply {
-                                putExtra("song_title", selectedSong.title)
-                                putExtra("song_artist", selectedSong.artist)
-                                putExtra("song_url", selectedSong.url)
-                                putExtra("song_thumbnail", selectedSong.thumbnailUrl)
-                                putExtra("song_lyrics", selectedSong.lyrics) // Truyền lyrics
+                rvRecommendations.adapter = SongAdapter(
+                    songs = songs,
+                    onSongClick = { selectedSong ->
+                        if (isLoggedIn) {
+                            Log.d("MainActivity", "Song URL before passing to SongActivity: ${selectedSong.url}")
+                            if (selectedSong.url.isNullOrEmpty()) {
+                                Toast.makeText(this, "Không tìm thấy URL bài hát", Toast.LENGTH_SHORT).show()
+                            } else {
+                                val intent = Intent(this, SongActivity::class.java).apply {
+                                    putExtra("song_title", selectedSong.title)
+                                    putExtra("song_artist", selectedSong.artist)
+                                    putExtra("song_url", selectedSong.url)
+                                    putExtra("song_thumbnail", selectedSong.thumbnailUrl)
+                                    putExtra("song_lyrics", selectedSong.lyrics)
+                                }
+                                startActivity(intent)
                             }
-                            startActivity(intent)
+                        } else {
+                            Toast.makeText(this, "Vui lòng đăng nhập để nghe nhạc", Toast.LENGTH_SHORT).show()
+                            startActivity(Intent(this, LoginActivity::class.java))
                         }
-                    } else {
-                        Toast.makeText(this, "Vui lòng đăng nhập để nghe nhạc", Toast.LENGTH_SHORT).show()
-                        startActivity(Intent(this, LoginActivity::class.java))
-                    }
-                }
+                    },
+                    onEditClick = { /* Không cần xử lý chỉnh sửa trong MainActivity */ },
+                    onDeleteClick = { /* Không cần xử lý xóa trong MainActivity */ },
+                    isManageMode = false
+                )
             },
             { error ->
                 Toast.makeText(this, "Lỗi khi lấy gợi ý bài hát: ${error.message}", Toast.LENGTH_LONG).show()
@@ -299,6 +318,12 @@ class MainActivity : AppCompatActivity() {
         super.onResume()
         val sharedPreferences = getSharedPreferences("UserPrefs", Context.MODE_PRIVATE)
         isLoggedIn = sharedPreferences.getBoolean("isLoggedIn", false)
+        val role = sharedPreferences.getString("role", "user")
+        if (isLoggedIn && role == "admin") {
+            startActivity(Intent(this, AdminActivity::class.java))
+            finish()
+            return
+        }
         updateAuthButton()
     }
 }

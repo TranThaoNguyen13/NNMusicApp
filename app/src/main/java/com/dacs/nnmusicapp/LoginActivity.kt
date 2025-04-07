@@ -50,7 +50,7 @@ class LoginActivity : AppCompatActivity() {
     }
 
     private fun login(username: String, password: String) {
-        val url = "http://10.0.2.2/nnmusicapp_api/login.php" // Cập nhật URL API
+        val url = "http://10.0.2.2/nnmusicapp_api/login.php"
         val requestQueue = Volley.newRequestQueue(this)
 
         val request = object : StringRequest(
@@ -70,8 +70,14 @@ class LoginActivity : AppCompatActivity() {
                         apply()
                     }
 
-                    // Quay lại MainActivity
-                    finish()
+                    // Chuyển hướng dựa trên vai trò
+                    if (role == "admin") {
+                        startActivity(Intent(this, AdminActivity::class.java))
+                        finish() // Đóng LoginActivity
+                    } else {
+                        // Vai trò khác (user), quay lại MainActivity
+                        finish()
+                    }
                 } else {
                     val message = jsonObject.getString("message")
                     Toast.makeText(this, message, Toast.LENGTH_SHORT).show()

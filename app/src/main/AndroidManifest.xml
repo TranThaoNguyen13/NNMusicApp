@@ -34,7 +34,9 @@
         <activity android:name=".AdminActivity" />
         <activity android:name=".SongActivity" />
         <activity android:name=".AlbumSongsActivity" />
-
+        <activity android:name=".admin.ManageUsersActivity" />
+        <activity android:name=".admin.ManageSongsActivity" />
+        <activity android:name=".admin.ManageAlbumsActivity" />
     </application>
 
 </manifest>

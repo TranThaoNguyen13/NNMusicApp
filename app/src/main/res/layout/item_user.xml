@@ -4,7 +4,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_marginBottom="8dp"
+    android:layout_margin="8dp"
     app:cardCornerRadius="8dp"
     app:cardElevation="2dp"
     app:cardBackgroundColor="#1E1E1E">
@@ -14,40 +14,42 @@
         android:layout_height="wrap_content"
         android:padding="8dp">
 
-        <ImageView
-            android:id="@+id/ivThumbnail"
-            android:layout_width="50dp"
-            android:layout_height="50dp"
-            android:scaleType="centerCrop"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent"
-            android:layout_marginEnd="8dp" />
-
         <TextView
-            android:id="@+id/tvTitle"
+            android:id="@+id/tvUsername"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:text="Title"
+            android:text="Username"
             android:textColor="#FFFFFF"
             android:textSize="16sp"
             android:textStyle="bold"
+            app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent"
-            app:layout_constraintStart_toEndOf="@id/ivThumbnail"
-            app:layout_constraintEnd_toStartOf="@id/btnEdit"
+            app:layout_constraintEnd_toStartOf="@id/tvEmail"
             android:layout_marginEnd="8dp" />
 
         <TextView
-            android:id="@+id/tvArtist"
+            android:id="@+id/tvEmail"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:text="Artist"
+            android:text="Email"
             android:textColor="#BBBBBB"
             android:textSize="14sp"
-            app:layout_constraintTop_toBottomOf="@id/tvTitle"
-            app:layout_constraintStart_toEndOf="@id/ivThumbnail"
-            app:layout_constraintEnd_toStartOf="@id/btnEdit"
+            app:layout_constraintStart_toEndOf="@id/tvUsername"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintEnd_toStartOf="@id/tvRole"
             android:layout_marginEnd="8dp" />
 
+        <TextView
+            android:id="@+id/tvRole"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Role"
+            android:textColor="#BBBBBB"
+            android:textSize="14sp"
+            app:layout_constraintStart_toEndOf="@id/tvEmail"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintEnd_toStartOf="@id/btnEdit"
+            android:layout_marginEnd="8dp" />
 
         <ImageButton
             android:id="@+id/btnEdit"
@@ -55,7 +57,6 @@
             android:layout_height="wrap_content"
             android:src="@android:drawable/ic_menu_edit"
             app:tint="#BB86FC"
-            android:visibility="gone"
             app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintEnd_toStartOf="@id/btnDelete"
             android:layout_marginEnd="8dp" />
@@ -66,7 +67,6 @@
             android:layout_height="wrap_content"
             android:src="@android:drawable/ic_menu_delete"
             app:tint="#CF6679"
-            android:visibility="gone"
             app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintEnd_toEndOf="parent" />
 

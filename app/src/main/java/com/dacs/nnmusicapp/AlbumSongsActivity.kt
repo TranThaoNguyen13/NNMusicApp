@@ -5,6 +5,7 @@ import android.os.Bundle
 import android.util.Log
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.widget.Toolbar
 import com.android.volley.Request
 import com.android.volley.toolbox.JsonArrayRequest
 import com.android.volley.toolbox.Volley
@@ -17,6 +18,12 @@ class AlbumSongsActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_album_songs)
+
+        // Thiết lập Toolbar
+        val toolbar = findViewById<Toolbar>(R.id.toolbar)
+        setSupportActionBar(toolbar)
+        supportActionBar?.setDisplayHomeAsUpEnabled(true) // Hiển thị nút quay lại
+        supportActionBar?.title = "Danh sách bài hát"
 
         // Lấy albumId từ Intent
         val albumId = intent.getIntExtra("albumId", -1)
@@ -46,8 +53,10 @@ class AlbumSongsActivity : AppCompatActivity() {
                             artist = songJson.getString("artist"),
                             url = songJson.optString("url", null),
                             quality = songJson.optString("quality", null),
+                            trendingScore = if (songJson.isNull("trending_score")) null else songJson.optInt("trending_score", 0),
+                            isRecommend = if (songJson.isNull("is_recommend")) null else songJson.optInt("is_recommend", 0) == 1,
                             thumbnailUrl = songJson.optString("thumbnail_url", null),
-                            albumId = songJson.getInt("album_id"),
+                            albumId = if (songJson.isNull("album_id")) null else songJson.optInt("album_id", 0),
                             lyrics = songJson.optString("lyrics", null)
                         )
                         Log.d("AlbumSongsActivity", "Parsed song: $song")
@@ -98,5 +107,10 @@ class AlbumSongsActivity : AppCompatActivity() {
             putExtra("song_lyrics", song.lyrics) // Truyền lyrics
         }
         startActivity(intent)
+    }
+
+    override fun onSupportNavigateUp(): Boolean {
+        onBackPressed()
+        return true
     }
 }

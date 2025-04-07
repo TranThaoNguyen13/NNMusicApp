@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="16dp"
+    android:background="#1E1E1E">
+
+    <EditText
+        android:id="@+id/etTitle"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Tên bài hát"
+        android:textColor="#FFFFFF"
+        android:textColorHint="#BBBBBB"
+        android:backgroundTint="#BB86FC"
+        android:layout_marginBottom="8dp" />
+
+    <EditText
+        android:id="@+id/etArtist"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Ca sĩ"
+        android:textColor="#FFFFFF"
+        android:textColorHint="#BBBBBB"
+        android:backgroundTint="#BB86FC"
+        android:layout_marginBottom="8dp" />
+
+    <EditText
+        android:id="@+id/etUrl"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="URL bài hát"
+        android:textColor="#FFFFFF"
+        android:textColorHint="#BBBBBB"
+        android:backgroundTint="#BB86FC"
+        android:layout_marginBottom="8dp" />
+
+    <Spinner
+        android:id="@+id/spinnerQuality"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:backgroundTint="#BB86FC"
+        android:layout_marginBottom="8dp" />
+
+    <CheckBox
+        android:id="@+id/cbIsRecommend"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Đề xuất"
+        android:textColor="#FFFFFF"
+        android:layout_marginBottom="8dp" />
+
+    <EditText
+        android:id="@+id/etThumbnailUrl"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="URL hình ảnh đại diện (tùy chọn)"
+        android:textColor="#FFFFFF"
+        android:textColorHint="#BBBBBB"
+        android:backgroundTint="#BB86FC"
+        android:layout_marginBottom="8dp" />
+
+    <EditText
+        android:id="@+id/etAlbumId"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="ID Album (tùy chọn)"
+        android:inputType="number"
+        android:textColor="#FFFFFF"
+        android:textColorHint="#BBBBBB"
+        android:backgroundTint="#BB86FC"
+        android:layout_marginBottom="8dp" />
+
+    <EditText
+        android:id="@+id/etLyrics"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Lời bài hát (tùy chọn)"
+        android:textColor="#FFFFFF"
+        android:textColorHint="#BBBBBB"
+        android:backgroundTint="#BB86FC"
+        android:layout_marginBottom="16dp"
+        android:lines="3"
+        android:gravity="top" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="end">
+
+        <Button
+            android:id="@+id/btnCancel"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Hủy"
+            android:textColor="#FFFFFF"
+            android:backgroundTint="#CF6679"
+            android:layout_marginEnd="8dp" />
+
+        <Button
+            android:id="@+id/btnSave"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Lưu"
+            android:textColor="#FFFFFF"
+            android:backgroundTint="#BB86FC" />
+    </LinearLayout>
+</LinearLayout>
