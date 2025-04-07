@@ -51,11 +51,14 @@ class ManageSongsActivity : AppCompatActivity() {
         // Thiết lập RecyclerView
         binding.rvSongs.layoutManager = LinearLayoutManager(this)
         songAdapter = SongAdapter(
+            context = this,
             songs = songs,
             onSongClick = { /* Không cần xử lý click vào bài hát trong chế độ quản lý */ },
             onEditClick = { song -> showEditSongDialog(song) },
             onDeleteClick = { song -> deleteSong(song) },
-            isManageMode = true
+            onFavoriteClick = { _, _ -> /* Không cần xử lý yêu thích trong ManageSongsActivity */ },
+            isManageMode = true,
+            userId = "admin" // Hoặc lấy userId từ SharedPreferences nếu cần
         )
         binding.rvSongs.adapter = songAdapter
 
@@ -141,7 +144,7 @@ class ManageSongsActivity : AppCompatActivity() {
             val artist = etArtist.text.toString().trim()
             val url = etUrl.text.toString().trim().ifEmpty { null }
             val quality = spinnerQuality.selectedItem.toString()
-            val isRecommended = cbIsRecommended.isChecked // Sửa isRecommend thành isRecommended
+            val isRecommended = cbIsRecommended.isChecked
             val thumbnailUrl = etThumbnailUrl.text.toString().trim().ifEmpty { null }
             val albumId = etAlbumId.text.toString().trim().toIntOrNull()
             val lyrics = etLyrics.text.toString().trim().ifEmpty { null }
@@ -188,7 +191,7 @@ class ManageSongsActivity : AppCompatActivity() {
         etThumbnailUrl.setText(song.thumbnailUrl)
         etAlbumId.setText(song.albumId?.toString())
         etLyrics.setText(song.lyrics)
-        cbIsRecommended.isChecked = song.isRecommended == true // Sửa isRecommend thành isRecommended
+        cbIsRecommended.isChecked = song.isRecommended == true
 
         val qualityLevels = resources.getStringArray(R.array.quality_levels)
         val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, qualityLevels)
@@ -201,7 +204,7 @@ class ManageSongsActivity : AppCompatActivity() {
             val artist = etArtist.text.toString().trim()
             val url = etUrl.text.toString().trim().ifEmpty { null }
             val quality = spinnerQuality.selectedItem.toString()
-            val isRecommended = cbIsRecommended.isChecked // Sửa isRecommend thành isRecommended
+            val isRecommended = cbIsRecommended.isChecked
             val thumbnailUrl = etThumbnailUrl.text.toString().trim().ifEmpty { null }
             val albumId = etAlbumId.text.toString().trim().toIntOrNull()
             val lyrics = etLyrics.text.toString().trim().ifEmpty { null }
@@ -229,7 +232,7 @@ class ManageSongsActivity : AppCompatActivity() {
         artist: String,
         url: String?,
         quality: String?,
-        isRecommended: Boolean, // Sửa isRecommend thành isRecommended
+        isRecommended: Boolean,
         thumbnailUrl: String?,
         albumId: Int?,
         lyrics: String?,
@@ -263,7 +266,7 @@ class ManageSongsActivity : AppCompatActivity() {
                     put("artist", artist)
                     put("url", url)
                     put("quality", quality)
-                    put("is_recommended", if (isRecommended) 1 else 0) // Tên tham số API vẫn là is_recommended
+                    put("is_recommended", if (isRecommended) 1 else 0)
                     put("thumbnail_url", thumbnailUrl)
                     put("album_id", albumId)
                     put("lyrics", lyrics)
@@ -284,7 +287,7 @@ class ManageSongsActivity : AppCompatActivity() {
         artist: String,
         url: String?,
         quality: String?,
-        isRecommended: Boolean, // Sửa isRecommend thành isRecommended
+        isRecommended: Boolean,
         thumbnailUrl: String?,
         albumId: Int?,
         lyrics: String?,
@@ -319,7 +322,7 @@ class ManageSongsActivity : AppCompatActivity() {
                     put("artist", artist)
                     put("url", url)
                     put("quality", quality)
-                    put("is_recommended", if (isRecommended) 1 else 0) // Tên tham số API vẫn là is_recommended
+                    put("is_recommended", if (isRecommended) 1 else 0)
                     put("thumbnail_url", thumbnailUrl)
                     put("album_id", albumId)
                     put("lyrics", lyrics)

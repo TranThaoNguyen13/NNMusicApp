@@ -4,108 +4,88 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
-    android:padding="16dp"
-    android:background="#1E1E1E">
+    android:padding="16dp">
 
     <EditText
         android:id="@+id/etTitle"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:hint="Tên bài hát"
-        android:textColor="#FFFFFF"
-        android:textColorHint="#BBBBBB"
-        android:backgroundTint="#BB86FC"
-        android:layout_marginBottom="8dp" />
+        android:inputType="text" />
 
     <EditText
         android:id="@+id/etArtist"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:hint="Ca sĩ"
-        android:textColor="#FFFFFF"
-        android:textColorHint="#BBBBBB"
-        android:backgroundTint="#BB86FC"
-        android:layout_marginBottom="8dp" />
+        android:hint="Tên ca sĩ"
+        android:inputType="text"
+        android:layout_marginTop="8dp" />
 
     <EditText
         android:id="@+id/etUrl"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:hint="URL bài hát"
-        android:textColor="#FFFFFF"
-        android:textColorHint="#BBBBBB"
-        android:backgroundTint="#BB86FC"
-        android:layout_marginBottom="8dp" />
+        android:inputType="textUri"
+        android:layout_marginTop="8dp" />
 
     <Spinner
         android:id="@+id/spinnerQuality"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:backgroundTint="#BB86FC"
-        android:layout_marginBottom="8dp" />
+        android:layout_marginTop="8dp" />
 
     <CheckBox
         android:id="@+id/cbIsRecommended"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Đề xuất"
-        android:textColor="#FFFFFF"
-        android:layout_marginBottom="8dp" />
+        android:layout_marginTop="8dp" />
 
     <EditText
         android:id="@+id/etThumbnailUrl"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:hint="URL hình ảnh đại diện (tùy chọn)"
-        android:textColor="#FFFFFF"
-        android:textColorHint="#BBBBBB"
-        android:backgroundTint="#BB86FC"
-        android:layout_marginBottom="8dp" />
+        android:hint="URL hình ảnh"
+        android:inputType="textUri"
+        android:layout_marginTop="8dp" />
 
     <EditText
         android:id="@+id/etAlbumId"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:hint="ID Album (tùy chọn)"
+        android:hint="ID Album"
         android:inputType="number"
-        android:textColor="#FFFFFF"
-        android:textColorHint="#BBBBBB"
-        android:backgroundTint="#BB86FC"
-        android:layout_marginBottom="8dp" />
+        android:layout_marginTop="8dp" />
 
     <EditText
         android:id="@+id/etLyrics"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:hint="Lời bài hát (tùy chọn)"
-        android:textColor="#FFFFFF"
-        android:textColorHint="#BBBBBB"
-        android:backgroundTint="#BB86FC"
-        android:layout_marginBottom="16dp"
-        android:lines="3"
-        android:gravity="top" />
+        android:hint="Lời bài hát"
+        android:inputType="textMultiLine"
+        android:minLines="3"
+        android:layout_marginTop="8dp" />
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        android:gravity="end">
+        android:gravity="end"
+        android:layout_marginTop="16dp">
 
         <Button
             android:id="@+id/btnCancel"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Hủy"
-            android:textColor="#FFFFFF"
-            android:backgroundTint="#CF6679"
             android:layout_marginEnd="8dp" />
 
         <Button
             android:id="@+id/btnSave"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Lưu"
-            android:textColor="#FFFFFF"
-            android:backgroundTint="#BB86FC" />
+            android:text="Lưu" />
+
     </LinearLayout>
 </LinearLayout>

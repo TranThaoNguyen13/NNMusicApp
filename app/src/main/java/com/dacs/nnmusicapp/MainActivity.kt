@@ -7,6 +7,7 @@ import android.os.Handler
 import android.os.Looper
 import android.util.Log
 import android.widget.Button
+import android.widget.ImageButton
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.SearchView
@@ -17,13 +18,10 @@ import com.android.volley.RequestQueue
 import com.android.volley.toolbox.JsonArrayRequest
 import com.android.volley.toolbox.StringRequest
 import com.android.volley.toolbox.Volley
-import com.dacs.nnmusicapp.AlbumAdapter
-import com.dacs.nnmusicapp.SongAdapter
-import com.dacs.nnmusicapp.SliderAdapter
-import com.dacs.nnmusicapp.adapters.TrendingSongAdapter
+import com.dacs.nnmusicapp.AdminActivity
 import com.dacs.nnmusicapp.databinding.ActivityMainBinding
-import com.dacs.nnmusicapp.Album
-import com.dacs.nnmusicapp.Song
+import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
 import org.json.JSONException
 import org.json.JSONObject
 
@@ -32,11 +30,16 @@ class MainActivity : AppCompatActivity() {
     private lateinit var binding: ActivityMainBinding
     private lateinit var viewPager: ViewPager2
     private lateinit var btnAuth: Button
+    private lateinit var btnFavorite: ImageButton // Thêm biến cho nút Yêu thích
     private lateinit var requestQueue: RequestQueue
     private lateinit var albumAdapter: AlbumAdapter
+    private lateinit var trendingSongAdapter: SongAdapter
+    private lateinit var favoriteSongAdapter: SongAdapter
     private var isLoggedIn = false
+    private var userId: String? = null
     private val trendingSongs = mutableListOf<Song>()
-    private lateinit var trendingSongAdapter: TrendingSongAdapter
+    private val favoriteSongs = mutableListOf<Song>()
+    private val gson = Gson()
 
     private val sliderImages = listOf(
         "https://i.imgur.com/stW72UJ.png",
@@ -50,7 +53,8 @@ class MainActivity : AppCompatActivity() {
         // Kiểm tra vai trò ngay khi khởi động
         val sharedPreferences = getSharedPreferences("UserPrefs", Context.MODE_PRIVATE)
         isLoggedIn = sharedPreferences.getBoolean("isLoggedIn", false)
-        val role = sharedPreferences.getString("role", "user") // Mặc định là "user" nếu không có role
+        val role = sharedPreferences.getString("role", "user")
+        userId = sharedPreferences.getString("user_id", "default_user")
 
         // Nếu là admin, chuyển hướng đến AdminActivity
         if (isLoggedIn && role == "admin") {
@@ -65,33 +69,88 @@ class MainActivity : AppCompatActivity() {
         try {
             // Ánh xạ các thành phần
             btnAuth = binding.btnAuth
+            btnFavorite = binding.btnFavorite // Ánh xạ nút Yêu thích
             viewPager = binding.viewPager
             binding.rvAlbums.layoutManager = LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false)
             binding.rvRecommendations.layoutManager = LinearLayoutManager(this)
 
             // Thiết lập RecyclerView cho danh sách trending
             binding.rvTrendingSongs.layoutManager = LinearLayoutManager(this)
-            trendingSongAdapter = TrendingSongAdapter(trendingSongs) { song ->
-                if (isLoggedIn) {
-                    Log.d("MainActivity", "Song URL before passing to SongActivity: ${song.url}")
-                    if (song.url.isNullOrEmpty()) {
-                        Toast.makeText(this, "Không tìm thấy URL bài hát", Toast.LENGTH_SHORT).show()
-                    } else {
-                        val intent = Intent(this, SongActivity::class.java).apply {
-                            putExtra("song_title", song.title)
-                            putExtra("song_artist", song.artist)
-                            putExtra("song_url", song.url)
-                            putExtra("song_thumbnail", song.thumbnailUrl)
-                            putExtra("song_lyrics", song.lyrics)
+            trendingSongAdapter = SongAdapter(
+                context = this@MainActivity,
+                songs = trendingSongs,
+                onSongClick = { song ->
+                    if (isLoggedIn) {
+                        Log.d("MainActivity", "Song URL before passing to SongActivity: ${song.url}")
+                        if (song.url.isNullOrEmpty()) {
+                            Toast.makeText(this, "Không tìm thấy URL bài hát", Toast.LENGTH_SHORT).show()
+                        } else {
+                            val intent = Intent(this, SongActivity::class.java).apply {
+                                putExtra("song_title", song.title)
+                                putExtra("song_artist", song.artist)
+                                putExtra("song_url", song.url)
+                                putExtra("song_thumbnail", song.thumbnailUrl)
+                                putExtra("song_lyrics", song.lyrics)
+                            }
+                            startActivity(intent)
                         }
-                        startActivity(intent)
+                    } else {
+                        Toast.makeText(this, "Vui lòng đăng nhập để nghe nhạc", Toast.LENGTH_SHORT).show()
+                        startActivity(Intent(this, LoginActivity::class.java))
                     }
-                } else {
-                    Toast.makeText(this, "Vui lòng đăng nhập để nghe nhạc", Toast.LENGTH_SHORT).show()
-                    startActivity(Intent(this, LoginActivity::class.java))
-                }
-            }
+                },
+                onFavoriteClick = { song, isFavorite ->
+                    if (isLoggedIn) {
+                        Toast.makeText(this, if (isFavorite) "Đã thêm ${song.title} vào yêu thích" else "Đã xóa ${song.title} khỏi yêu thích", Toast.LENGTH_SHORT).show()
+                        updateFavoriteSongs()
+                    } else {
+                        Toast.makeText(this, "Vui lòng đăng nhập để thêm vào yêu thích", Toast.LENGTH_SHORT).show()
+                        startActivity(Intent(this, LoginActivity::class.java))
+                    }
+                },
+                isManageMode = false,
+                userId = userId ?: "default_user"
+            )
             binding.rvTrendingSongs.adapter = trendingSongAdapter
+
+            // Thiết lập RecyclerView cho danh sách yêu thích
+            binding.rvFavoriteSongs.layoutManager = LinearLayoutManager(this)
+            favoriteSongAdapter = SongAdapter(
+                context = this@MainActivity,
+                songs = favoriteSongs,
+                onSongClick = { song ->
+                    if (isLoggedIn) {
+                        Log.d("MainActivity", "Song URL before passing to SongActivity: ${song.url}")
+                        if (song.url.isNullOrEmpty()) {
+                            Toast.makeText(this, "Không tìm thấy URL bài hát", Toast.LENGTH_SHORT).show()
+                        } else {
+                            val intent = Intent(this, SongActivity::class.java).apply {
+                                putExtra("song_title", song.title)
+                                putExtra("song_artist", song.artist)
+                                putExtra("song_url", song.url)
+                                putExtra("song_thumbnail", song.thumbnailUrl)
+                                putExtra("song_lyrics", song.lyrics)
+                            }
+                            startActivity(intent)
+                        }
+                    } else {
+                        Toast.makeText(this, "Vui lòng đăng nhập để nghe nhạc", Toast.LENGTH_SHORT).show()
+                        startActivity(Intent(this, LoginActivity::class.java))
+                    }
+                },
+                onFavoriteClick = { song, isFavorite ->
+                    if (isLoggedIn) {
+                        Toast.makeText(this, if (isFavorite) "Đã thêm ${song.title} vào yêu thích" else "Đã xóa ${song.title} khỏi yêu thích", Toast.LENGTH_SHORT).show()
+                        updateFavoriteSongs()
+                    } else {
+                        Toast.makeText(this, "Vui lòng đăng nhập để thêm vào yêu thích", Toast.LENGTH_SHORT).show()
+                        startActivity(Intent(this, LoginActivity::class.java))
+                    }
+                },
+                isManageMode = false,
+                userId = userId ?: "default_user"
+            )
+            binding.rvFavoriteSongs.adapter = favoriteSongAdapter
 
             // Thiết lập Toolbar
             setSupportActionBar(binding.toolbar)
@@ -117,16 +176,26 @@ class MainActivity : AppCompatActivity() {
                     val sharedPreferences = getSharedPreferences("UserPrefs", Context.MODE_PRIVATE)
                     sharedPreferences.edit().apply {
                         putBoolean("isLoggedIn", false)
-                        putString("role", "user") // Reset role về user
+                        putString("role", "user")
+                        putString("user_id", null)
                         apply()
                     }
                     isLoggedIn = false
+                    userId = "default_user"
                     updateAuthButton()
+                    updateFavoriteSongs()
                     Toast.makeText(this, "Đã đăng xuất", Toast.LENGTH_SHORT).show()
                 } else {
                     // Đăng nhập
                     startActivity(Intent(this, LoginActivity::class.java))
                 }
+            }
+
+            // Xử lý nút Yêu thích
+            btnFavorite.setOnClickListener {
+                val intent = Intent(this, FavoriteSongsActivity::class.java)
+                intent.putParcelableArrayListExtra("all_songs", ArrayList(trendingSongs))
+                startActivity(intent)
             }
 
             // Xử lý SearchView
@@ -243,6 +312,7 @@ class MainActivity : AppCompatActivity() {
                             trendingSongs.add(song)
                         }
                         trendingSongAdapter.notifyDataSetChanged()
+                        updateFavoriteSongs()
                     } else {
                         val jsonObject = JSONObject(response)
                         if (jsonObject.has("status") && jsonObject.getString("status") == "error") {
@@ -290,6 +360,7 @@ class MainActivity : AppCompatActivity() {
                     }
                 }
                 binding.rvRecommendations.adapter = SongAdapter(
+                    context = this@MainActivity,
                     songs = songs,
                     onSongClick = { selectedSong ->
                         if (isLoggedIn) {
@@ -311,9 +382,17 @@ class MainActivity : AppCompatActivity() {
                             startActivity(Intent(this, LoginActivity::class.java))
                         }
                     },
-                    onEditClick = { /* Không cần xử lý chỉnh sửa trong MainActivity */ },
-                    onDeleteClick = { /* Không cần xử lý xóa trong MainActivity */ },
-                    isManageMode = false
+                    onFavoriteClick = { song, isFavorite ->
+                        if (isLoggedIn) {
+                            Toast.makeText(this, if (isFavorite) "Đã thêm ${song.title} vào yêu thích" else "Đã xóa ${song.title} khỏi yêu thích", Toast.LENGTH_SHORT).show()
+                            updateFavoriteSongs()
+                        } else {
+                            Toast.makeText(this, "Vui lòng đăng nhập để thêm vào yêu thích", Toast.LENGTH_SHORT).show()
+                            startActivity(Intent(this, LoginActivity::class.java))
+                        }
+                    },
+                    isManageMode = false,
+                    userId = userId ?: "default_user"
                 )
             },
             { error ->
@@ -323,10 +402,24 @@ class MainActivity : AppCompatActivity() {
         requestQueue.add(jsonArrayRequest)
     }
 
+    private fun updateFavoriteSongs() {
+        val sharedPreferences = getSharedPreferences("favorites_${userId}", MODE_PRIVATE)
+        val favoritesJson = sharedPreferences.getString("favorite_songs", "[]")
+        val type = object : TypeToken<MutableSet<Int>>() {}.type
+        val favoriteSongIds: MutableSet<Int> = gson.fromJson(favoritesJson, type) ?: mutableSetOf()
+
+        favoriteSongs.clear()
+        favoriteSongs.addAll(trendingSongs.filter { favoriteSongIds.contains(it.id) })
+        if (::favoriteSongAdapter.isInitialized) {
+            favoriteSongAdapter.notifyDataSetChanged()
+        }
+    }
+
     override fun onResume() {
         super.onResume()
         val sharedPreferences = getSharedPreferences("UserPrefs", Context.MODE_PRIVATE)
         isLoggedIn = sharedPreferences.getBoolean("isLoggedIn", false)
+        userId = sharedPreferences.getString("user_id", "default_user")
         val role = sharedPreferences.getString("role", "user")
         if (isLoggedIn && role == "admin") {
             startActivity(Intent(this, AdminActivity::class.java))
@@ -334,5 +427,6 @@ class MainActivity : AppCompatActivity() {
             return
         }
         updateAuthButton()
+        updateFavoriteSongs()
     }
 }

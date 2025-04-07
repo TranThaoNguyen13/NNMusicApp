@@ -1,59 +1,101 @@
 package com.dacs.nnmusicapp
 
+import android.content.Context
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.ImageButton
+import android.widget.ImageView
+import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
-import com.bumptech.glide.Glide
-import com.dacs.nnmusicapp.databinding.ItemSongBinding
+import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
+import com.squareup.picasso.Picasso // Thêm import
 
 class SongAdapter(
+    private val context: Context,
     private val songs: List<Song>,
-    private val onSongClick: (Song) -> Unit = { _ -> },
-    private val onEditClick: (Song) -> Unit = { _ -> },
-    private val onDeleteClick: (Song) -> Unit = { _ -> },
-    private val isManageMode: Boolean = false
+    private val onSongClick: (Song) -> Unit,
+    private val onEditClick: (Song) -> Unit = {},
+    private val onDeleteClick: (Song) -> Unit = {},
+    private val onFavoriteClick: (Song, Boolean) -> Unit,
+    private val isManageMode: Boolean = false,
+    private val userId: String? = null
 ) : RecyclerView.Adapter<SongAdapter.SongViewHolder>() {
 
+    inner class SongViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
+        val tvTitle: TextView = itemView.findViewById(R.id.tvTitle)
+        val tvArtist: TextView = itemView.findViewById(R.id.tvArtist)
+        val ivThumbnail: ImageView = itemView.findViewById(R.id.ivThumbnail)
+        val btnEdit: ImageButton = itemView.findViewById(R.id.btnEdit)
+        val btnDelete: ImageButton = itemView.findViewById(R.id.btnDelete)
+        val btnFavorite: ImageView = itemView.findViewById(R.id.btnFavorite)
+
+        fun bind(song: Song) {
+            tvTitle.text = song.title
+            tvArtist.text = song.artist
+
+            // Tải hình ảnh từ thumbnailUrl
+            if (!song.thumbnailUrl.isNullOrEmpty()) {
+                Picasso.get()
+                    .load(song.thumbnailUrl)
+                    .placeholder(R.drawable.ic_music_placeholder) // Hình ảnh placeholder khi đang tải
+                    .error(R.drawable.ic_music_placeholder) // Hình ảnh hiển thị nếu tải lỗi
+                    .into(ivThumbnail)
+            } else {
+                ivThumbnail.setImageResource(R.drawable.ic_music_placeholder) // Hiển thị placeholder nếu thumbnailUrl null
+            }
+
+            if (userId != null) {
+                val sharedPreferences = context.getSharedPreferences("favorites_${userId}", Context.MODE_PRIVATE)
+                val favoritesJson = sharedPreferences.getString("favorite_songs", "[]")
+                val type = object : TypeToken<MutableSet<Int>>() {}.type
+                val favoriteSongIds: MutableSet<Int> = Gson().fromJson(favoritesJson, type) ?: mutableSetOf()
+                val isFavorite = favoriteSongIds.contains(song.id)
+                btnFavorite.setImageResource(
+                    if (isFavorite) R.drawable.ic_favorite else R.drawable.ic_favorite_border
+                )
+
+                btnFavorite.setOnClickListener {
+                    val newFavoriteStatus = !isFavorite
+                    if (newFavoriteStatus) {
+                        favoriteSongIds.add(song.id)
+                    } else {
+                        favoriteSongIds.remove(song.id)
+                    }
+                    sharedPreferences.edit().putString("favorite_songs", Gson().toJson(favoriteSongIds)).apply()
+                    btnFavorite.setImageResource(
+                        if (newFavoriteStatus) R.drawable.ic_favorite else R.drawable.ic_favorite_border
+                    )
+                    onFavoriteClick(song, newFavoriteStatus)
+                }
+            } else {
+                btnFavorite.visibility = View.GONE
+            }
+
+            if (isManageMode) {
+                btnEdit.visibility = View.VISIBLE
+                btnDelete.visibility = View.VISIBLE
+                btnFavorite.visibility = View.GONE
+                btnEdit.setOnClickListener { onEditClick(song) }
+                btnDelete.setOnClickListener { onDeleteClick(song) }
+            } else {
+                btnEdit.visibility = View.GONE
+                btnDelete.visibility = View.GONE
+                btnFavorite.visibility = if (userId != null) View.VISIBLE else View.GONE
+                itemView.setOnClickListener { onSongClick(song) }
+            }
+        }
+    }
+
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): SongViewHolder {
-        val binding = ItemSongBinding.inflate(LayoutInflater.from(parent.context), parent, false)
-        return SongViewHolder(binding)
+        val view = LayoutInflater.from(context).inflate(R.layout.item_song, parent, false)
+        return SongViewHolder(view)
     }
 
     override fun onBindViewHolder(holder: SongViewHolder, position: Int) {
-        val song = songs[position]
-        holder.bind(song, isManageMode)
-        holder.itemView.setOnClickListener { onSongClick(song) }
-        if (isManageMode) {
-            holder.binding.btnEdit.setOnClickListener { onEditClick(song) }
-            holder.binding.btnDelete.setOnClickListener { onDeleteClick(song) }
-        }
+        holder.bind(songs[position])
     }
 
     override fun getItemCount(): Int = songs.size
-
-    class SongViewHolder(val binding: ItemSongBinding) : RecyclerView.ViewHolder(binding.root) {
-        fun bind(song: Song, isManageMode: Boolean) {
-            binding.tvTitle.text = song.title ?: "Unknown Title"
-            binding.tvArtist.text = song.artist ?: "Unknown Artist"
-            Glide.with(binding.ivThumbnail.context)
-                .load(song.thumbnailUrl)
-                .placeholder(R.drawable.ic_music_note)
-                .error(R.drawable.ic_music_note)
-                .into(binding.ivThumbnail)
-
-            // Hiển thị hoặc ẩn nút Sửa/Xóa dựa trên chế độ
-            if (isManageMode) {
-                binding.btnEdit.visibility = View.VISIBLE
-                binding.btnDelete.visibility = View.VISIBLE
-            } else {
-                binding.btnEdit.visibility = View.GONE
-                binding.btnDelete.visibility = View.GONE
-            }
-
-            // (Tùy chọn) Hiển thị trạng thái isRecommended nếu cần
-            // Nếu layout item_song.xml có TextView tvIsRecommended
-            // binding.tvIsRecommended?.text = if (song.isRecommended == true) "Recommended" else "Not Recommended"
-        }
-    }
 }
