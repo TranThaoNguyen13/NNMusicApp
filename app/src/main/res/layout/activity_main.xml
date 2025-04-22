@@ -19,7 +19,6 @@
             app:titleTextColor="#FFFFFF"
             app:popupTheme="@style/Theme.NNMusicApp.PopupOverlay">
 
-            <!-- LinearLayout để chứa nút Đăng nhập và biểu tượng Yêu thích -->
             <LinearLayout
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
@@ -27,7 +26,6 @@
                 android:gravity="end"
                 android:layout_gravity="end">
 
-                <!-- Nút Đăng nhập/Đăng xuất -->
                 <Button
                     android:id="@+id/btnAuth"
                     android:layout_width="wrap_content"
@@ -35,7 +33,6 @@
                     android:text="Đăng nhập"
                     android:layout_marginEnd="8dp" />
 
-                <!-- Biểu tượng Yêu thích -->
                 <ImageButton
                     android:id="@+id/btnFavorite"
                     android:layout_width="40dp"
@@ -46,7 +43,6 @@
                     android:layout_marginEnd="8dp" />
             </LinearLayout>
         </androidx.appcompat.widget.Toolbar>
-
     </com.google.android.material.appbar.AppBarLayout>
 
     <androidx.core.widget.NestedScrollView
@@ -60,7 +56,6 @@
             android:orientation="vertical"
             android:padding="16dp">
 
-            <!-- SearchView -->
             <androidx.appcompat.widget.SearchView
                 android:id="@+id/searchView"
                 android:layout_width="match_parent"
@@ -68,14 +63,12 @@
                 android:layout_marginTop="8dp"
                 app:queryHint="Tìm kiếm bài hát..." />
 
-            <!-- Slider -->
             <androidx.viewpager2.widget.ViewPager2
                 android:id="@+id/viewPager"
                 android:layout_width="match_parent"
                 android:layout_height="200dp"
                 android:layout_marginTop="16dp" />
 
-            <!-- Danh sách Album -->
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
@@ -92,8 +85,8 @@
                 android:layout_marginTop="8dp"
                 app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager" />
 
-            <!-- Danh sách bài hát Trending -->
             <TextView
+                android:id="@+id/tvTrendingTitle"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Top 1 Trending"
@@ -109,7 +102,17 @@
                 android:layout_marginTop="8dp"
                 app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager" />
 
-            <!-- Danh sách bài hát Yêu thích -->
+            <ImageButton
+                android:id="@+id/btnToggleViewMore"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:src="@android:drawable/ic_menu_more"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                app:tint="#FFFFFF"
+                android:contentDescription="Xem thêm"
+                android:layout_gravity="center"
+                android:layout_marginTop="8dp" />
+
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
@@ -126,7 +129,6 @@
                 android:layout_marginTop="8dp"
                 app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager" />
 
-            <!-- Danh sách bài hát Gợi ý -->
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"

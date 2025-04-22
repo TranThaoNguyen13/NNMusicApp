@@ -18,7 +18,6 @@ import com.android.volley.RequestQueue
 import com.android.volley.toolbox.JsonArrayRequest
 import com.android.volley.toolbox.StringRequest
 import com.android.volley.toolbox.Volley
-import com.dacs.nnmusicapp.AdminActivity
 import com.dacs.nnmusicapp.databinding.ActivityMainBinding
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
@@ -30,16 +29,18 @@ class MainActivity : AppCompatActivity() {
     private lateinit var binding: ActivityMainBinding
     private lateinit var viewPager: ViewPager2
     private lateinit var btnAuth: Button
-    private lateinit var btnFavorite: ImageButton // Thêm biến cho nút Yêu thích
+    private lateinit var btnFavorite: ImageButton
     private lateinit var requestQueue: RequestQueue
     private lateinit var albumAdapter: AlbumAdapter
     private lateinit var trendingSongAdapter: SongAdapter
     private lateinit var favoriteSongAdapter: SongAdapter
     private var isLoggedIn = false
     private var userId: String? = null
-    private val trendingSongs = mutableListOf<Song>()
+    private val allTrendingSongs = mutableListOf<Song>() // Lưu trữ tất cả bài hát trending (Top 10)
+    private val displayedTrendingSongs = mutableListOf<Song>() // Lưu trữ bài hát trending đang hiển thị (3 hoặc 10 bài)
     private val favoriteSongs = mutableListOf<Song>()
     private val gson = Gson()
+    private var isExpanded = false // Trạng thái: true nếu hiển thị 10 bài, false nếu hiển thị 3 bài
 
     private val sliderImages = listOf(
         "https://i.imgur.com/stW72UJ.png",
@@ -69,16 +70,17 @@ class MainActivity : AppCompatActivity() {
         try {
             // Ánh xạ các thành phần
             btnAuth = binding.btnAuth
-            btnFavorite = binding.btnFavorite // Ánh xạ nút Yêu thích
+            btnFavorite = binding.btnFavorite
             viewPager = binding.viewPager
             binding.rvAlbums.layoutManager = LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false)
             binding.rvRecommendations.layoutManager = LinearLayoutManager(this)
 
             // Thiết lập RecyclerView cho danh sách trending
             binding.rvTrendingSongs.layoutManager = LinearLayoutManager(this)
+            displayedTrendingSongs.clear()
             trendingSongAdapter = SongAdapter(
                 context = this@MainActivity,
-                songs = trendingSongs,
+                songs = displayedTrendingSongs,
                 onSongClick = { song ->
                     if (isLoggedIn) {
                         Log.d("MainActivity", "Song URL before passing to SongActivity: ${song.url}")
@@ -194,8 +196,13 @@ class MainActivity : AppCompatActivity() {
             // Xử lý nút Yêu thích
             btnFavorite.setOnClickListener {
                 val intent = Intent(this, FavoriteSongsActivity::class.java)
-                intent.putParcelableArrayListExtra("all_songs", ArrayList(trendingSongs))
+                intent.putParcelableArrayListExtra("all_songs", ArrayList(allTrendingSongs))
                 startActivity(intent)
+            }
+
+            // Xử lý nút "Xem thêm"/"Thu lại" cho danh sách trending
+            binding.btnToggleViewMore.setOnClickListener {
+                toggleTrendingSongs()
             }
 
             // Xử lý SearchView
@@ -294,7 +301,7 @@ class MainActivity : AppCompatActivity() {
                 try {
                     if (response.trim().startsWith("[")) {
                         val jsonArray = org.json.JSONArray(response)
-                        trendingSongs.clear()
+                        allTrendingSongs.clear()
                         for (i in 0 until jsonArray.length()) {
                             val jsonObject = jsonArray.getJSONObject(i)
                             val song = Song(
@@ -309,9 +316,12 @@ class MainActivity : AppCompatActivity() {
                                 albumId = if (jsonObject.isNull("album_id")) null else jsonObject.optInt("album_id", 0),
                                 lyrics = jsonObject.optString("lyrics", null)
                             )
-                            trendingSongs.add(song)
+                            allTrendingSongs.add(song)
                         }
-                        trendingSongAdapter.notifyDataSetChanged()
+                        // Sắp xếp theo trendingScore (giảm dần)
+                        allTrendingSongs.sortByDescending { it.trendingScore ?: 0 }
+                        // Hiển thị 3 bài đầu tiên ban đầu
+                        updateTrendingSongs()
                         updateFavoriteSongs()
                     } else {
                         val jsonObject = JSONObject(response)
@@ -409,10 +419,28 @@ class MainActivity : AppCompatActivity() {
         val favoriteSongIds: MutableSet<Int> = gson.fromJson(favoritesJson, type) ?: mutableSetOf()
 
         favoriteSongs.clear()
-        favoriteSongs.addAll(trendingSongs.filter { favoriteSongIds.contains(it.id) })
+        favoriteSongs.addAll(allTrendingSongs.filter { favoriteSongIds.contains(it.id) })
         if (::favoriteSongAdapter.isInitialized) {
             favoriteSongAdapter.notifyDataSetChanged()
         }
+    }
+
+    private fun updateTrendingSongs() {
+        displayedTrendingSongs.clear()
+        val displayCount = if (isExpanded) 10 else 3 // Hiển thị 10 bài nếu mở rộng, 3 bài nếu thu gọn
+        displayedTrendingSongs.addAll(allTrendingSongs.take(displayCount))
+        trendingSongAdapter.notifyDataSetChanged()
+
+        // Cập nhật icon của nút "Xem thêm"/"Thu lại"
+        binding.btnToggleViewMore.setImageResource(
+            if (isExpanded) android.R.drawable.ic_menu_close_clear_cancel // Icon "Thu lại"
+            else android.R.drawable.ic_menu_more // Icon "Xem thêm"
+        )
+    }
+
+    private fun toggleTrendingSongs() {
+        isExpanded = !isExpanded
+        updateTrendingSongs()
     }
 
     override fun onResume() {

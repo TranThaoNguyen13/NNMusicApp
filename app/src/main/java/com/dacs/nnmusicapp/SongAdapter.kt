@@ -10,7 +10,7 @@ import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
-import com.squareup.picasso.Picasso // Thêm import
+import com.squareup.picasso.Picasso
 
 class SongAdapter(
     private val context: Context,
@@ -24,6 +24,7 @@ class SongAdapter(
 ) : RecyclerView.Adapter<SongAdapter.SongViewHolder>() {
 
     inner class SongViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
+        val tvRank: TextView = itemView.findViewById(R.id.tvRank) // Thêm TextView cho thứ hạng
         val tvTitle: TextView = itemView.findViewById(R.id.tvTitle)
         val tvArtist: TextView = itemView.findViewById(R.id.tvArtist)
         val ivThumbnail: ImageView = itemView.findViewById(R.id.ivThumbnail)
@@ -31,7 +32,10 @@ class SongAdapter(
         val btnDelete: ImageButton = itemView.findViewById(R.id.btnDelete)
         val btnFavorite: ImageView = itemView.findViewById(R.id.btnFavorite)
 
-        fun bind(song: Song) {
+        fun bind(song: Song, position: Int) { // Thêm tham số position để hiển thị thứ hạng
+            // Hiển thị thứ hạng
+            tvRank.text = "Top ${position + 1}"
+
             tvTitle.text = song.title
             tvArtist.text = song.artist
 
@@ -39,11 +43,11 @@ class SongAdapter(
             if (!song.thumbnailUrl.isNullOrEmpty()) {
                 Picasso.get()
                     .load(song.thumbnailUrl)
-                    .placeholder(R.drawable.ic_music_placeholder) // Hình ảnh placeholder khi đang tải
-                    .error(R.drawable.ic_music_placeholder) // Hình ảnh hiển thị nếu tải lỗi
+                    .placeholder(R.drawable.ic_music_placeholder)
+                    .error(R.drawable.ic_music_placeholder)
                     .into(ivThumbnail)
             } else {
-                ivThumbnail.setImageResource(R.drawable.ic_music_placeholder) // Hiển thị placeholder nếu thumbnailUrl null
+                ivThumbnail.setImageResource(R.drawable.ic_music_placeholder)
             }
 
             if (userId != null) {
@@ -94,7 +98,7 @@ class SongAdapter(
     }
 
     override fun onBindViewHolder(holder: SongViewHolder, position: Int) {
-        holder.bind(songs[position])
+        holder.bind(songs[position], position) // Truyền position vào bind()
     }
 
     override fun getItemCount(): Int = songs.size
