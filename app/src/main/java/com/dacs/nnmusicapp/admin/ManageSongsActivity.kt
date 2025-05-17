@@ -86,7 +86,7 @@ class ManageSongsActivity : AppCompatActivity() {
                             id = songJson.getInt("id"),
                             title = songJson.getString("title"),
                             artist = songJson.getString("artist"),
-                            filepath = if (songJson.isNull("filepath")) null else songJson.getString("url"),
+                            file_path = if (songJson.isNull("file_path")) null else songJson.getString("url"),
                             quality = if (songJson.isNull("quality")) null else songJson.getString("quality"),
                             trendingScore = if (songJson.isNull("trending_score")) null else songJson.getInt("trending_score"),
                             isRecommended = if (songJson.isNull("is_recommended")) null else songJson.getInt("is_recommended") == 1,
@@ -187,7 +187,7 @@ class ManageSongsActivity : AppCompatActivity() {
 
         etTitle.setText(song.title)
         etArtist.setText(song.artist)
-        etUrl.setText(song.filepath)
+        etUrl.setText(song.file_path)
         etThumbnailUrl.setText(song.thumbnailUrl)
         etAlbumId.setText(song.albumId?.toString())
         etLyrics.setText(song.lyrics)

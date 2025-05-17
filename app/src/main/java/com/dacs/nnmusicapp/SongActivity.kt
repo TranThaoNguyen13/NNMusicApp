@@ -28,10 +28,11 @@ class SongActivity : AppCompatActivity() {
         val songThumbnail = intent.getStringExtra("song_thumbnail")
         val songLyrics = intent.getStringExtra("song_lyrics")
 
-        Log.d("SongActivity", "songUrl: $songUrl") // Debug URL
+        Log.d("SongActivity", "songUrl: $songUrl")
         if (songUrl.isNullOrEmpty()) {
             Log.e("SongActivity", "songUrl is null or empty!")
             Toast.makeText(this, "URL bài hát không hợp lệ", Toast.LENGTH_SHORT).show()
+            finish()
             return
         }
 

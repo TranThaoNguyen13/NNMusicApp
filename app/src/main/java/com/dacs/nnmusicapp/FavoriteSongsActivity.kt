@@ -58,13 +58,13 @@ class FavoriteSongsActivity : AppCompatActivity() {
             context = this@FavoriteSongsActivity,
             songs = favoriteSongs,
             onSongClick = { song ->
-                if (song.filepath.isNullOrEmpty()) {
+                if (song.file_path.isNullOrEmpty()) {
                     Toast.makeText(this, "Không tìm thấy URL bài hát", Toast.LENGTH_SHORT).show()
                 } else {
                     val intent = Intent(this, SongActivity::class.java).apply {
                         putExtra("song_title", song.title)
                         putExtra("song_artist", song.artist)
-                        putExtra("song_url", song.filepath)
+                        putExtra("song_url", song.file_path)
                         putExtra("song_thumbnail", song.thumbnailUrl)
                         putExtra("song_lyrics", song.lyrics)
                     }

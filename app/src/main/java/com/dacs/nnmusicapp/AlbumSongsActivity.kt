@@ -45,7 +45,7 @@ class AlbumSongsActivity : AppCompatActivity() {
     }
 
     private fun fetchSongsByAlbum(albumId: Int) {
-        val url = "${MainActivity.BASE_URL}/albums/$albumId/songs" // Sử dụng /api/ đúng với route
+        val url = "${MainActivity.BASE_URL}/albums/$albumId/songs"
         Log.d("AlbumSongsActivity", "Fetching songs from: $url")
 
         val request = JsonObjectRequest(
@@ -60,16 +60,26 @@ class AlbumSongsActivity : AppCompatActivity() {
                         return@JsonObjectRequest
                     }
 
-                    songs.clear() // Xóa danh sách cũ để tránh trùng lặp
+                    songs.clear()
                     for (i in 0 until songsArray.length()) {
                         val songJson = songsArray.getJSONObject(i)
+                        val file_path = songJson.optString("file_path", null)
+                        if (file_path.isNullOrEmpty()) {
+                            Log.w("AlbumSongsActivity", "Empty or null file_path for song ${songJson.getString("title")}")
+                            continue
+                        }
+                        // Đảm bảo filepath là URL đầy đủ (nếu cần)
+                        val adjustedFilepath = if (!file_path.startsWith("http")) {
+                            "http://10.0.2.2:8000/$file_path"
+                        } else {
+                            file_path
+                        }
+                        Log.d("AlbumSongsActivity", "Adjusted file_path: $adjustedFilepath")
                         val song = Song(
                             id = songJson.getInt("id"),
                             title = songJson.getString("title"),
                             artist = songJson.getString("artist"),
-                            filepath = songJson.optString("file_path", null).also { url ->
-                                if (url.isNullOrEmpty()) Log.w("AlbumSongsActivity", "Empty or null file_path for song ${songJson.getString("title")}")
-                            },
+                            file_path = adjustedFilepath,
                             quality = songJson.optString("quality", null),
                             trendingScore = if (songJson.isNull("trending_score")) null else songJson.optInt("trending_score", 0),
                             isRecommended = if (songJson.isNull("is_recommended")) null else songJson.optInt("is_recommended", 0) == 1,
@@ -82,12 +92,11 @@ class AlbumSongsActivity : AppCompatActivity() {
                     }
 
                     if (songs.isEmpty()) {
-                        Toast.makeText(this, "Không có bài hát nào trong album này", Toast.LENGTH_LONG).show()
+                        Toast.makeText(this, "Không có bài hát nào có URL hợp lệ", Toast.LENGTH_LONG).show()
                         finish()
                         return@JsonObjectRequest
                     }
 
-                    // Truyền danh sách bài hát cho SongListFragment
                     val fragment = SongListFragment.newInstance(songs)
                     supportFragmentManager.beginTransaction()
                         .replace(R.id.fragment_container, fragment)
@@ -109,7 +118,6 @@ class AlbumSongsActivity : AppCompatActivity() {
                 finish()
             }
         )
-
         Volley.newRequestQueue(this).add(request)
     }
 
@@ -120,8 +128,8 @@ class AlbumSongsActivity : AppCompatActivity() {
             return
         }
 
-        Log.d("AlbumSongsActivity", "Song URL before passing to SongActivity: ${song.filepath}")
-        if (song.filepath.isNullOrEmpty()) {
+        Log.d("AlbumSongsActivity", "Song URL before passing to SongActivity: ${song.file_path}")
+        if (song.file_path.isNullOrEmpty()) {
             Toast.makeText(this, "Không tìm thấy URL bài hát", Toast.LENGTH_SHORT).show()
             return
         }
@@ -130,7 +138,7 @@ class AlbumSongsActivity : AppCompatActivity() {
         val intent = Intent(this, SongActivity::class.java).apply {
             putExtra("song_title", song.title)
             putExtra("song_artist", song.artist)
-            putExtra("song_url", song.filepath)
+            putExtra("song_url", song.file_path)
             putExtra("song_thumbnail", song.thumbnailUrl)
             putExtra("song_lyrics", song.lyrics)
         }
@@ -141,4 +149,5 @@ class AlbumSongsActivity : AppCompatActivity() {
         onBackPressedDispatcher.onBackPressed()
         return true
     }
+
 }

@@ -78,14 +78,14 @@
                     songs = displayedTrendingSongs,
                     onSongClick = { song ->
                         if (isLoggedIn) {
-                            Log.d("MainActivity", "Song URL before passing to SongActivity: ${song.filepath}")
-                            if (song.filepath.isNullOrEmpty()) {
+                            Log.d("MainActivity", "Song URL before passing to SongActivity: ${song.file_path}")
+                            if (song.file_path.isNullOrEmpty()) {
                                 Toast.makeText(this, "Không tìm thấy URL bài hát", Toast.LENGTH_SHORT).show()
                             } else {
                                 val intent = Intent(this, SongActivity::class.java).apply {
                                     putExtra("song_title", song.title)
                                     putExtra("song_artist", song.artist)
-                                    putExtra("song_url", song.filepath)
+                                    putExtra("song_url", song.file_path)
                                     putExtra("song_thumbnail", song.thumbnailUrl)
                                     putExtra("song_lyrics", song.lyrics)
                                 }
@@ -117,14 +117,14 @@
                     songs = favoriteSongs,
                     onSongClick = { song ->
                         if (isLoggedIn) {
-                            Log.d("MainActivity", "Song URL before passing to SongActivity: ${song.filepath}")
-                            if (song.filepath.isNullOrEmpty()) {
+                            Log.d("MainActivity", "Song URL before passing to SongActivity: ${song.file_path}")
+                            if (song.file_path.isNullOrEmpty()) {
                                 Toast.makeText(this, "Không tìm thấy URL bài hát", Toast.LENGTH_SHORT).show()
                             } else {
                                 val intent = Intent(this, SongActivity::class.java).apply {
                                     putExtra("song_title", song.title)
                                     putExtra("song_artist", song.artist)
-                                    putExtra("song_url", song.filepath)
+                                    putExtra("song_url", song.file_path)
                                     putExtra("song_thumbnail", song.thumbnailUrl)
                                     putExtra("song_lyrics", song.lyrics)
                                 }
@@ -246,41 +246,59 @@
             }
         }
 
+        private val albums = mutableListOf<Album>()
+
         private fun fetchAlbums() {
             val url = "$BASE_URL/albums"
-
-            binding.progressBar?.visibility = View.VISIBLE // Hiển thị loading (nếu có ProgressBar)
+            Log.d("MainActivity", "Fetching albums from: $url")
+            binding.progressBar?.visibility = View.VISIBLE
             val request = JsonArrayRequest(
                 Request.Method.GET, url, null,
                 { response ->
-                    binding.progressBar?.visibility = View.GONE // Ẩn loading
-                    val albums = mutableListOf<Album>()
+                    binding.progressBar?.visibility = View.GONE
+                    Log.d("MainActivity", "Albums response: $response")
                     try {
+                        albums.clear()
+                        if (response.length() == 0) {
+                            Log.w("MainActivity", "No albums found from API")
+                            Toast.makeText(this, "Không có album nào", Toast.LENGTH_SHORT).show()
+                            return@JsonArrayRequest
+                        }
                         for (i in 0 until response.length()) {
-                            val albumJson = response.getJSONObject(i)
+                            val jsonObject = response.getJSONObject(i)
                             val album = Album(
-                                id = albumJson.getInt("id"),
-                                title = albumJson.getString("title"),
-                                artist = albumJson.optString("artist", null),
-                                coverUrl = albumJson.optString("cover_url", null)
+                                id = jsonObject.getInt("id"),
+                                title = jsonObject.getString("title"),
+                                artist = jsonObject.optString("artist", null),
+                                coverUrl = jsonObject.optString("cover_url", null)
                             )
                             albums.add(album)
                         }
-                        albumAdapter = AlbumAdapter(albums) { album ->
-                            val intent = Intent(this, AlbumSongsActivity::class.java).apply {
-                                putExtra("albumId", album.id)
-                            }
-                            startActivity(intent)
+                        if (!::albumAdapter.isInitialized) {
+                            albumAdapter = AlbumAdapter(
+                                albums = albums,
+                                onAlbumClick = { album ->
+                                    val intent = Intent(this, AlbumSongsActivity::class.java).apply {
+                                        putExtra("albumId", album.id)
+                                    }
+                                    startActivity(intent)
+                                }
+                            )
+                            binding.rvAlbums.adapter = albumAdapter
+                        } else {
+                            albumAdapter.notifyDataSetChanged()
                         }
-                        binding.rvAlbums.adapter = albumAdapter
+                        Log.d("MainActivity", "Fetched albums: $albums")
                     } catch (e: JSONException) {
-                        Log.e("MainActivity", "JSON parsing error: ${e.message}")
-                        Toast.makeText(this, "Error parsing albums", Toast.LENGTH_LONG).show()
+                        Log.e("MainActivity", "Error parsing albums: ${e.message}")
+                        Toast.makeText(this, "Lỗi phân tích dữ liệu album: ${e.message}", Toast.LENGTH_LONG).show()
                     }
                 },
                 { error ->
-                    binding.progressBar?.visibility = View.GONE // Ẩn loading
+                    binding.progressBar?.visibility = View.GONE
                     Log.e("MainActivity", "Volley error: ${error.message}")
+                    Log.e("MainActivity", "Network response: ${error.networkResponse?.statusCode}")
+                    Log.e("MainActivity", "Error details: ${error.networkResponse?.data?.let { String(it) }}")
                     Toast.makeText(this, "Error fetching albums: ${error.message}", Toast.LENGTH_LONG).show()
                 }
             )
@@ -289,22 +307,27 @@
 
         private fun fetchTrendingSongs() {
             val url = "$BASE_URL/songs/trending"
-
-            binding.progressBar?.visibility = View.VISIBLE // Hiển thị loading
+            binding.progressBar?.visibility = View.VISIBLE
             val request = JsonArrayRequest(
                 Request.Method.GET, url, null,
                 { response ->
-                    binding.progressBar?.visibility = View.GONE // Ẩn loading
+                    binding.progressBar?.visibility = View.GONE
                     Log.d("MainActivity", "API Response: $response")
                     try {
                         allTrendingSongs.clear()
                         for (i in 0 until response.length()) {
                             val jsonObject = response.getJSONObject(i)
+                            val file_path = jsonObject.optString("file_path", null)
+                            val adjustedFilepath = if (!file_path.isNullOrEmpty() && !file_path.startsWith("http")) {
+                                "http://10.0.2.2:8000/$file_path" // Điều chỉnh cho emulator
+                            } else {
+                                file_path
+                            }
                             val song = Song(
                                 id = jsonObject.getInt("id"),
                                 title = jsonObject.getString("title"),
                                 artist = jsonObject.getString("artist"),
-                                filepath = jsonObject.optString("filepath", null),
+                                file_path = adjustedFilepath,
                                 quality = jsonObject.optString("quality", null),
                                 trendingScore = if (jsonObject.isNull("trending_score")) null else jsonObject.optInt("trending_score", 0),
                                 isRecommended = if (jsonObject.isNull("is_recommended")) null else jsonObject.optInt("is_recommended", 0) == 1,
@@ -314,9 +337,7 @@
                             )
                             allTrendingSongs.add(song)
                         }
-                        // Sắp xếp theo trendingScore (giảm dần)
                         allTrendingSongs.sortByDescending { it.trendingScore ?: 0 }
-                        // Hiển thị 3 bài đầu tiên ban đầu
                         updateTrendingSongs()
                         updateFavoriteSongs()
                     } catch (e: JSONException) {
@@ -325,7 +346,7 @@
                     }
                 },
                 { error ->
-                    binding.progressBar?.visibility = View.GONE // Ẩn loading
+                    binding.progressBar?.visibility = View.GONE
                     Log.e("MainActivity", "Error fetching trending songs: ${error.message}")
                     Toast.makeText(this, "Lỗi kết nối API: ${error.message}", Toast.LENGTH_LONG).show()
                 }
@@ -349,7 +370,7 @@
                                 id = jsonObject.getInt("id"),
                                 title = jsonObject.getString("title"),
                                 artist = jsonObject.getString("artist"),
-                                filepath = jsonObject.optString("filepath", null),
+                                file_path = jsonObject.optString("file_path", null),
                                 quality = jsonObject.optString("quality", null),
                                 trendingScore = if (jsonObject.isNull("trending_score")) null else jsonObject.optInt("trending_score", 0),
                                 isRecommended = if (jsonObject.isNull("is_recommended")) null else jsonObject.optInt("is_recommended", 0) == 1,
@@ -368,14 +389,14 @@
                         songs = songs,
                         onSongClick = { selectedSong ->
                             if (isLoggedIn) {
-                                Log.d("MainActivity", "Song URL before passing to SongActivity: ${selectedSong.filepath}")
-                                if (selectedSong.filepath.isNullOrEmpty()) {
+                                Log.d("MainActivity", "Song URL before passing to SongActivity: ${selectedSong.file_path}")
+                                if (selectedSong.file_path.isNullOrEmpty()) {
                                     Toast.makeText(this, "Không tìm thấy URL bài hát", Toast.LENGTH_SHORT).show()
                                 } else {
                                     val intent = Intent(this, SongActivity::class.java).apply {
                                         putExtra("song_title", selectedSong.title)
                                         putExtra("song_artist", selectedSong.artist)
-                                        putExtra("song_url", selectedSong.filepath)
+                                        putExtra("song_url", selectedSong.file_path)
                                         putExtra("song_thumbnail", selectedSong.thumbnailUrl)
                                         putExtra("song_lyrics", selectedSong.lyrics)
                                     }

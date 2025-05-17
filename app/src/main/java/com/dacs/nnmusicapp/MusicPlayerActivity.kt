@@ -14,11 +14,10 @@ import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.viewpager2.widget.ViewPager2
 import com.bumptech.glide.Glide
-import java.io.File
 import java.io.IOException
 import java.net.HttpURLConnection
-import java.util.concurrent.TimeUnit
 import java.net.URL
+import java.util.concurrent.TimeUnit
 
 class MusicPlayerActivity : AppCompatActivity() {
 
@@ -59,12 +58,13 @@ class MusicPlayerActivity : AppCompatActivity() {
         currentSongPosition = intent.getIntExtra("selected_song_position", 0)
 
         if (songs.isEmpty()) {
+            Log.e("MusicPlayerActivity", "No songs available")
             Toast.makeText(this, "Không có bài hát để phát", Toast.LENGTH_LONG).show()
             finish()
             return
         }
 
-        // Thiết lập ViewPager để hiển thị lời bài hát khi lướt sang phải
+        // Thiết lập ViewPager để hiển thị lời bài hát
         setupViewPager()
 
         // Phát bài hát đầu tiên
@@ -118,7 +118,6 @@ class MusicPlayerActivity : AppCompatActivity() {
             }
         }
 
-        // Hiển thị ViewPager khi lướt sang phải
         viewPager.registerOnPageChangeCallback(object : ViewPager2.OnPageChangeCallback() {
             override fun onPageSelected(position: Int) {
                 super.onPageSelected(position)
@@ -142,62 +141,64 @@ class MusicPlayerActivity : AppCompatActivity() {
 
         try {
             mediaPlayer?.release()
-
-            if (song.filepath.isNullOrEmpty()) {
+            if (song.file_path.isNullOrEmpty()) {
                 throw IllegalArgumentException("Đường dẫn bài hát không hợp lệ")
             }
+            var adjustedUrl = song.file_path
+            adjustedUrl = adjustedUrl.replace("127.0.0.1", "10.0.2.2")
+            if (!adjustedUrl.contains(":8000")) {
+                adjustedUrl = adjustedUrl.replace("10.0.2.2", "10.0.2.2:8000")
+            }
+            if (adjustedUrl.startsWith("https://")) {
+                adjustedUrl = adjustedUrl.replace("https://", "http://")
+            }
+            Log.d("MusicPlayerActivity", "Attempting to play from URL: $adjustedUrl")
 
             mediaPlayer = MediaPlayer().apply {
-                if (song.filepath.startsWith("http")) {
-                    var adjustedUrl = song.filepath.replace("127.0.0.1", "10.0.2.2")
-                    if (!adjustedUrl.contains(":8000")) {
-                        adjustedUrl = adjustedUrl.replace("10.0.2.2", "10.0.2.2:8000")
-                    }
-                    if (adjustedUrl.startsWith("https://")) {
-                        adjustedUrl = adjustedUrl.replace("https://", "http://")
-                    }
-
-                    Log.d("MusicPlayerActivity", "Playing URL: $adjustedUrl")
-
-                    setDataSource(adjustedUrl)
-                } else {
-                    val file = File(song.filepath)
-                    if (file.exists()) {
-                        setDataSource(song.filepath)
-                    } else {
-                        Toast.makeText(this@MusicPlayerActivity, "File không tồn tại: ${song.filepath}", Toast.LENGTH_LONG).show()
-                        return
-                    }
-                }
-
+                setDataSource(adjustedUrl)
                 setOnPreparedListener {
+                    Log.d("MusicPlayerActivity", "MediaPlayer prepared, starting playback")
                     start()
                     seekBar.max = duration
                     tvTotalTime.text = formatTime(duration)
                     updateSeekBar()
                     btnPlayPause.setImageResource(android.R.drawable.ic_media_pause)
                 }
-
                 setOnErrorListener { mp, what, extra ->
                     Log.e("MusicPlayerActivity", "MediaPlayer Error: what=$what, extra=$extra")
-                    Toast.makeText(this@MusicPlayerActivity, "Lỗi phát nhạc: $what,$extra", Toast.LENGTH_LONG).show()
+                    when (what) {
+                        MediaPlayer.MEDIA_ERROR_UNKNOWN -> {
+                            if (extra == -2147483648) {
+                                Log.e("MusicPlayerActivity", "ENOENT: File not found at $adjustedUrl")
+                                Toast.makeText(this@MusicPlayerActivity, "Không tìm thấy file bài hát", Toast.LENGTH_LONG).show()
+                            } else {
+                                Log.e("MusicPlayerActivity", "Unknown error with extra: $extra")
+                                Toast.makeText(this@MusicPlayerActivity, "Lỗi không xác định: $extra", Toast.LENGTH_LONG).show()
+                            }
+                        }
+                        MediaPlayer.MEDIA_ERROR_SERVER_DIED -> {
+                            Log.e("MusicPlayerActivity", "Server died")
+                            Toast.makeText(this@MusicPlayerActivity, "Lỗi server", Toast.LENGTH_LONG).show()
+                        }
+                        else -> {
+                            Log.e("MusicPlayerActivity", "Other error: $what")
+                            Toast.makeText(this@MusicPlayerActivity, "Lỗi phát nhạc: $what", Toast.LENGTH_LONG).show()
+                        }
+                    }
                     false
                 }
-
                 setOnCompletionListener {
+                    Log.d("MusicPlayerActivity", "Playback completed")
                     playNextSong()
                 }
-
                 prepareAsync()
             }
-
         } catch (e: Exception) {
             e.printStackTrace()
             Log.e("MusicPlayerActivity", "Error playing music: ${e.message}")
             Toast.makeText(this, "Lỗi phát nhạc: ${e.message}", Toast.LENGTH_LONG).show()
         }
     }
-
 
     private fun playPreviousSong() {
         if (currentSongPosition > 0) {
@@ -223,6 +224,7 @@ class MusicPlayerActivity : AppCompatActivity() {
                     handler.postDelayed(this, 1000)
                 } catch (e: Exception) {
                     e.printStackTrace()
+                    Log.e("MusicPlayerActivity", "SeekBar update error: ${e.message}")
                 }
             }
         }, 1000)
