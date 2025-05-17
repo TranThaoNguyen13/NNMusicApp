@@ -1,17 +1,19 @@
-package com.dacs.nnmusicapp
+package com.dacs.nnmusicapp;
 
-import android.content.Context
-import android.content.Intent
-import android.os.Bundle
-import android.widget.Button
-import android.widget.EditText
-import android.widget.TextView
-import android.widget.Toast
-import androidx.appcompat.app.AppCompatActivity
-import com.android.volley.Request
-import com.android.volley.toolbox.StringRequest
-import com.android.volley.toolbox.Volley
-import org.json.JSONObject
+import android.content.Context;
+import android.content.Intent;
+import android.os.Bundle;
+import android.util.Log;
+import android.widget.Button;
+import android.widget.EditText;
+import android.widget.TextView;
+import android.widget.Toast;
+import androidx.appcompat.app.AppCompatActivity;
+import com.android.volley.Request;
+import com.android.volley.toolbox.JsonObjectRequest;
+import com.android.volley.toolbox.Volley;
+import org.json.JSONObject;
+import java.nio.charset.StandardCharsets; // Sửa import
 
 class LoginActivity : AppCompatActivity() {
 
@@ -50,45 +52,69 @@ class LoginActivity : AppCompatActivity() {
     }
 
     private fun login(username: String, password: String) {
-        val url = "http://10.0.2.2/nnmusicapp_api/login.php"
+        val url = "${MainActivity.BASE_URL}/login"
         val requestQueue = Volley.newRequestQueue(this)
 
-        val request = object : StringRequest(
-            Method.POST, url,
+        val requestBody = JSONObject().apply {
+            put("name", username) // Sửa username thành name
+            put("password", password)
+        }
+
+        val request = object : JsonObjectRequest(
+            Request.Method.POST, url, requestBody,
             { response ->
-                val jsonObject = JSONObject(response)
-                if (jsonObject.getString("status") == "success") {
-                    val role = jsonObject.getString("role")
-                    Toast.makeText(this, "Đăng nhập thành công! Vai trò: $role", Toast.LENGTH_SHORT).show()
+                try {
+                    val status = response.getString("status")
+                    if (status == "success") {
+                        val role = response.getString("role")
+                        val userId = response.getString("user_id")
+                        Log.d("Login", "Success: role=$role, user_id=$userId")
+                        Toast.makeText(this, "Đăng nhập thành công! Vai trò: $role", Toast.LENGTH_SHORT).show()
 
-                    // Lưu trạng thái đăng nhập vào SharedPreferences
-                    val sharedPreferences = getSharedPreferences("UserPrefs", Context.MODE_PRIVATE)
-                    sharedPreferences.edit().apply {
-                        putBoolean("isLoggedIn", true)
-                        putString("username", username)
-                        putString("role", role)
-                        apply()
-                    }
+                        val sharedPreferences = getSharedPreferences("UserPrefs", Context.MODE_PRIVATE)
+                        sharedPreferences.edit().apply {
+                            putBoolean("isLoggedIn", true)
+                            putString("username", username)
+                            putString("role", role)
+                            putString("user_id", userId)
+                            apply()
+                        }
 
-                    // Chuyển hướng dựa trên vai trò
-                    if (role == "admin") {
-                        startActivity(Intent(this, AdminActivity::class.java))
-                        finish() // Đóng LoginActivity
+                        if (role == "admin") {
+                            startActivity(Intent(this, AdminActivity::class.java))
+                            finish()
+                        } else {
+                            finish()
+                        }
                     } else {
-                        // Vai trò khác (user), quay lại MainActivity
-                        finish()
+                        val message = response.getString("message")
+                        Log.d("Login", "Error: $message")
+                        Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
                     }
-                } else {
-                    val message = jsonObject.getString("message")
-                    Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
+                } catch (e: Exception) {
+                    Log.e("Login", "Error parsing response: ${e.message}")
+                    Toast.makeText(this, "Lỗi phân tích dữ liệu: ${e.message}", Toast.LENGTH_LONG).show()
                 }
             },
             { error ->
-                Toast.makeText(this, "Lỗi kết nối đến server: ${error.message}", Toast.LENGTH_SHORT).show()
+                var errorMessage = "Lỗi kết nối đến server: ${error.message ?: "Không thể kết nối"}"
+                if (error.networkResponse != null) {
+                    try {
+                        val serverError = String(error.networkResponse.data, StandardCharsets.UTF_8) // Sửa Charsets thành StandardCharsets
+                        Log.e("Login", "Server error: $serverError")
+                        errorMessage += "\nChi tiết: $serverError"
+                    } catch (e: Exception) {
+                        Log.e("Login", "Error parsing server response: ${e.message}")
+                    }
+                }
+                Log.e("Login", errorMessage)
+                Toast.makeText(this, errorMessage, Toast.LENGTH_LONG).show()
             }
         ) {
-            override fun getParams(): MutableMap<String, String> {
-                return hashMapOf("username" to username, "password" to password)
+            override fun getHeaders(): MutableMap<String, String> {
+                val headers = HashMap<String, String>()
+                headers["Content-Type"] = "application/json"
+                return headers
             }
         }
 

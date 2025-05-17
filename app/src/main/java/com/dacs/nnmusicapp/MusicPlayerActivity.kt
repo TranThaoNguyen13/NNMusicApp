@@ -14,7 +14,11 @@ import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.viewpager2.widget.ViewPager2
 import com.bumptech.glide.Glide
+import java.io.File
+import java.io.IOException
+import java.net.HttpURLConnection
 import java.util.concurrent.TimeUnit
+import java.net.URL
 
 class MusicPlayerActivity : AppCompatActivity() {
 
@@ -127,7 +131,6 @@ class MusicPlayerActivity : AppCompatActivity() {
         currentSongPosition = position
         val song = songs[currentSongPosition]
 
-        // Cập nhật giao diện
         tvSongTitle.text = song.title
         tvSongArtist.text = song.artist
         Glide.with(this)
@@ -137,26 +140,64 @@ class MusicPlayerActivity : AppCompatActivity() {
             .error(android.R.drawable.ic_menu_report_image)
             .into(ivThumbnail)
 
-        // Phát nhạc
         try {
             mediaPlayer?.release()
-            mediaPlayer = MediaPlayer().apply {
-                setDataSource(song.url!!)
-                prepare()
-                start()
-            }
-            btnPlayPause.setImageResource(android.R.drawable.ic_media_pause)
 
-            // Cập nhật SeekBar và thời gian
-            seekBar.max = mediaPlayer?.duration ?: 0
-            tvTotalTime.text = formatTime(mediaPlayer?.duration ?: 0)
-            updateSeekBar()
+            if (song.filepath.isNullOrEmpty()) {
+                throw IllegalArgumentException("Đường dẫn bài hát không hợp lệ")
+            }
+
+            mediaPlayer = MediaPlayer().apply {
+                if (song.filepath.startsWith("http")) {
+                    var adjustedUrl = song.filepath.replace("127.0.0.1", "10.0.2.2")
+                    if (!adjustedUrl.contains(":8000")) {
+                        adjustedUrl = adjustedUrl.replace("10.0.2.2", "10.0.2.2:8000")
+                    }
+                    if (adjustedUrl.startsWith("https://")) {
+                        adjustedUrl = adjustedUrl.replace("https://", "http://")
+                    }
+
+                    Log.d("MusicPlayerActivity", "Playing URL: $adjustedUrl")
+
+                    setDataSource(adjustedUrl)
+                } else {
+                    val file = File(song.filepath)
+                    if (file.exists()) {
+                        setDataSource(song.filepath)
+                    } else {
+                        Toast.makeText(this@MusicPlayerActivity, "File không tồn tại: ${song.filepath}", Toast.LENGTH_LONG).show()
+                        return
+                    }
+                }
+
+                setOnPreparedListener {
+                    start()
+                    seekBar.max = duration
+                    tvTotalTime.text = formatTime(duration)
+                    updateSeekBar()
+                    btnPlayPause.setImageResource(android.R.drawable.ic_media_pause)
+                }
+
+                setOnErrorListener { mp, what, extra ->
+                    Log.e("MusicPlayerActivity", "MediaPlayer Error: what=$what, extra=$extra")
+                    Toast.makeText(this@MusicPlayerActivity, "Lỗi phát nhạc: $what,$extra", Toast.LENGTH_LONG).show()
+                    false
+                }
+
+                setOnCompletionListener {
+                    playNextSong()
+                }
+
+                prepareAsync()
+            }
+
         } catch (e: Exception) {
             e.printStackTrace()
             Log.e("MusicPlayerActivity", "Error playing music: ${e.message}")
             Toast.makeText(this, "Lỗi phát nhạc: ${e.message}", Toast.LENGTH_LONG).show()
         }
     }
+
 
     private fun playPreviousSong() {
         if (currentSongPosition > 0) {

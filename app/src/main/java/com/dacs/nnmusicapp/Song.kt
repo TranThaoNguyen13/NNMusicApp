@@ -7,7 +7,7 @@ data class Song(
     val id: Int,
     val title: String,
     val artist: String,
-    val url: String?,
+    val filepath: String?,
     val quality: String?,
     val trendingScore: Int?, // Thêm trường trending_score
     val isRecommended: Boolean?, // Thêm trường is_recommend
@@ -19,7 +19,7 @@ data class Song(
         id = parcel.readInt(),
         title = parcel.readString() ?: "",
         artist = parcel.readString() ?: "",
-        url = parcel.readString(),
+        filepath = parcel.readString(),
         quality = parcel.readString(),
         trendingScore = parcel.readInt().let { if (it == -1) null else it }, // Đọc trending_score
         isRecommended = parcel.readByte().let { if (it == 0.toByte()) null else it == 1.toByte() }, // Đọc is_recommend
@@ -32,7 +32,7 @@ data class Song(
         parcel.writeInt(id)
         parcel.writeString(title)
         parcel.writeString(artist)
-        parcel.writeString(url)
+        parcel.writeString(filepath)
         parcel.writeString(quality)
         parcel.writeInt(trendingScore ?: -1) // Ghi trending_score, -1 nếu null
         parcel.writeByte((if (isRecommended == null) 0 else if (isRecommended) 1 else 2).toByte()) // Ghi is_recommend

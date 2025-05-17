@@ -1,6 +1,8 @@
 package com.dacs.nnmusicapp
 
 import android.os.Bundle
+import android.util.Log
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
 import androidx.viewpager2.widget.ViewPager2
@@ -13,23 +15,26 @@ class SongActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_song)
 
-        // Thiết lập Toolbar
         val toolbar = findViewById<Toolbar>(R.id.toolbar)
         setSupportActionBar(toolbar)
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
         supportActionBar?.setDisplayShowTitleEnabled(false)
 
-        // Ánh xạ ViewPager
         viewPager = findViewById(R.id.viewPager)
 
-        // Lấy dữ liệu từ Intent
         val songTitle = intent.getStringExtra("song_title") ?: "Unknown Title"
         val songArtist = intent.getStringExtra("song_artist") ?: "Unknown Artist"
         val songUrl = intent.getStringExtra("song_url")
         val songThumbnail = intent.getStringExtra("song_thumbnail")
         val songLyrics = intent.getStringExtra("song_lyrics")
 
-        // Thiết lập ViewPager với hai trang
+        Log.d("SongActivity", "songUrl: $songUrl") // Debug URL
+        if (songUrl.isNullOrEmpty()) {
+            Log.e("SongActivity", "songUrl is null or empty!")
+            Toast.makeText(this, "URL bài hát không hợp lệ", Toast.LENGTH_SHORT).show()
+            return
+        }
+
         setupViewPager(songTitle, songArtist, songUrl, songThumbnail, songLyrics)
     }
 
