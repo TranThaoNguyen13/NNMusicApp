@@ -2,14 +2,73 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical">
+    android:orientation="vertical"
+    android:padding="16dp"
+    android:background="#121212"
+    android:gravity="center">
 
+    <!-- Tiêu đề -->
     <TextView
-        android:id="@+id/textViewPayment"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Thanh toán qua MoMo"
-        android:textSize="18sp" />
+        android:text="@string/momo_payment_title"
+        android:textSize="24sp"
+        android:textColor="#FFFFFF"
+        android:textStyle="bold"
+        android:layout_marginBottom="16dp" />
 
-    <!-- Các thành phần giao diện khác cho MoMo Payment -->
+    <!-- Thông tin gói VIP -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:background="#1E1E1E"
+        android:padding="16dp"
+        android:layout_marginBottom="16dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/vip_package_title"
+            android:textSize="20sp"
+            android:textColor="#FFFFFF"
+            android:textStyle="bold" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/vip_package_price"
+            android:textSize="18sp"
+            android:textColor="#FFFFFF"
+            android:layout_marginTop="8dp" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/vip_package_description"
+            android:textSize="16sp"
+            android:textColor="#B0B0B0"
+            android:layout_marginTop="8dp" />
+    </LinearLayout>
+
+    <!-- Nút thanh toán -->
+    <Button
+        android:id="@+id/btnPayWithMomo"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/pay_with_momo"
+        android:textSize="18sp"
+        android:backgroundTint="#FF6200EE"
+        android:textColor="#FFFFFF"
+        android:padding="12dp"
+        android:layout_marginTop="16dp" />
+
+    <!-- ProgressBar -->
+    <ProgressBar
+        android:id="@+id/progressBar"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:visibility="gone" />
+
 </LinearLayout>

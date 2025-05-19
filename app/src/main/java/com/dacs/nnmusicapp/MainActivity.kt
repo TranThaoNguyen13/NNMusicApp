@@ -31,13 +31,15 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMainBinding
     private lateinit var viewPager: ViewPager2
-    private lateinit var btnAuth: Button
+    private lateinit var btnAuth: ImageButton
+    private lateinit var btnUpgradeVip: Button
     private lateinit var btnFavorite: ImageButton
     private lateinit var requestQueue: RequestQueue
     private lateinit var albumAdapter: AlbumAdapter
     private lateinit var trendingSongAdapter: SongAdapter
     private lateinit var favoriteSongAdapter: SongAdapter
     private var isLoggedIn = false
+    private var isVip = false
     private var userId: String? = null
     private val allTrendingSongs = mutableListOf<Song>()
     private val displayedTrendingSongs = mutableListOf<Song>()
@@ -56,12 +58,14 @@ class MainActivity : AppCompatActivity() {
 
         val sharedPreferences = getSharedPreferences("UserPrefs", Context.MODE_PRIVATE)
         isLoggedIn = sharedPreferences.getBoolean("isLoggedIn", false)
-        userId = sharedPreferences.getString("user_id", "default_user")
+        isVip = sharedPreferences.getBoolean("isVip", false)
+        userId = sharedPreferences.getString("user_id", null)
 
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
         btnAuth = binding.btnAuth
+        btnUpgradeVip = binding.btnUpgradeVip
         btnFavorite = binding.btnFavorite
         viewPager = binding.viewPager
         binding.rvAlbums.layoutManager = LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false)
@@ -102,8 +106,17 @@ class MainActivity : AppCompatActivity() {
                     startActivity(Intent(this, LoginActivity::class.java))
                 }
             },
+            onDownloadClick = { song ->
+                if (isVip) {
+                    downloadSong(song)
+                } else {
+                    Toast.makeText(this, "Bạn cần nâng cấp VIP để tải bài hát", Toast.LENGTH_SHORT).show()
+                    startActivity(Intent(this, MomoPaymentActivity::class.java))
+                }
+            },
             isManageMode = false,
-            userId = userId
+            userId = userId,
+            isVip = isVip
         )
         binding.rvTrendingSongs.adapter = trendingSongAdapter
 
@@ -127,8 +140,17 @@ class MainActivity : AppCompatActivity() {
                     startActivity(Intent(this, LoginActivity::class.java))
                 }
             },
+            onDownloadClick = { song ->
+                if (isVip) {
+                    downloadSong(song)
+                } else {
+                    Toast.makeText(this, "Bạn cần nâng cấp VIP để tải bài hát", Toast.LENGTH_SHORT).show()
+                    startActivity(Intent(this, MomoPaymentActivity::class.java))
+                }
+            },
             isManageMode = false,
-            userId = userId
+            userId = userId,
+            isVip = isVip
         )
         binding.rvFavoriteSongs.adapter = favoriteSongAdapter
 
@@ -147,7 +169,7 @@ class MainActivity : AppCompatActivity() {
                     apply()
                 }
                 isLoggedIn = false
-                userId = "default_user"
+                userId = null
                 updateAuthButton()
                 favoriteSongs.clear()
                 favoriteSongAdapter.notifyDataSetChanged()
@@ -155,6 +177,10 @@ class MainActivity : AppCompatActivity() {
             } else {
                 startActivity(Intent(this, LoginActivity::class.java))
             }
+        }
+
+        btnUpgradeVip.setOnClickListener {
+            startActivity(Intent(this, MomoPaymentActivity::class.java))
         }
 
         btnFavorite.setOnClickListener {
@@ -177,7 +203,13 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun updateAuthButton() {
-        btnAuth.text = if (isLoggedIn) "Đăng xuất" else "Đăng nhập"
+        if (isLoggedIn) {
+            btnAuth.setImageResource(R.drawable.ic_logout) // Sử dụng ic_logout
+            btnUpgradeVip.visibility = View.VISIBLE
+        } else {
+            btnAuth.setImageResource(R.drawable.ic_login) // Sử dụng ic_login
+            btnUpgradeVip.visibility = View.GONE
+        }
     }
 
     private fun setupSlider() {
@@ -266,7 +298,13 @@ class MainActivity : AppCompatActivity() {
                     }
                     allTrendingSongs.sortByDescending { it.trendingScore }
                     updateTrendingSongs()
-                    updateFavoriteSongsFromServer()
+                    if (isLoggedIn && userId != null) {
+                        updateFavoriteSongsFromServer()
+                    } else {
+                        favoriteSongs.clear()
+                        trendingSongAdapter.notifyDataSetChanged()
+                        favoriteSongAdapter.notifyDataSetChanged()
+                    }
                 } catch (e: JSONException) {
                     Log.e("MainActivity", "Error parsing trending songs: ${e.message}")
                     Toast.makeText(this, "Lỗi phân tích dữ liệu trending: ${e.message}", Toast.LENGTH_LONG).show()
@@ -332,8 +370,17 @@ class MainActivity : AppCompatActivity() {
                                 startActivity(Intent(this, LoginActivity::class.java))
                             }
                         },
+                        onDownloadClick = { song ->
+                            if (isVip) {
+                                downloadSong(song)
+                            } else {
+                                Toast.makeText(this, "Bạn cần nâng cấp VIP để tải bài hát", Toast.LENGTH_SHORT).show()
+                                startActivity(Intent(this, MomoPaymentActivity::class.java))
+                            }
+                        },
                         isManageMode = false,
-                        userId = userId
+                        userId = userId,
+                        isVip = isVip
                     )
                 } catch (e: JSONException) {
                     Log.e("MainActivity", "Error parsing recommendations: ${e.message}")
@@ -437,6 +484,13 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private fun downloadSong(song: Song) {
+        Toast.makeText(this, "Đang tải bài hát: ${song.title}", Toast.LENGTH_SHORT).show()
+        // Logic tải file (mô phỏng)
+        Log.d("MainActivity", "Downloading song from: ${song.file_path}")
+        // Bạn có thể dùng thư viện như DownloadManager để tải file thực tế
+    }
+
     private fun updateTrendingSongs() {
         displayedTrendingSongs.clear()
         val displayCount = if (isExpanded) 10 else 3
@@ -456,7 +510,8 @@ class MainActivity : AppCompatActivity() {
         super.onResume()
         val sharedPreferences = getSharedPreferences("UserPrefs", Context.MODE_PRIVATE)
         isLoggedIn = sharedPreferences.getBoolean("isLoggedIn", false)
-        userId = sharedPreferences.getString("user_id", "default_user")
+        isVip = sharedPreferences.getBoolean("isVip", false)
+        userId = sharedPreferences.getString("user_id", null)
         updateAuthButton()
         if (isLoggedIn) {
             updateFavoriteSongsFromServer()

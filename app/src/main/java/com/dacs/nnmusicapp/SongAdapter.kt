@@ -13,13 +13,15 @@ import com.squareup.picasso.Picasso
 class SongAdapter(
     private val context: Context,
     private val songs: List<Song>,
-    private val favoriteSongs: List<Song>, // Thêm danh sách yêu thích từ server
+    private val favoriteSongs: List<Song>,
     private val onSongClick: (Song) -> Unit,
     private val onEditClick: (Song) -> Unit = {},
     private val onDeleteClick: (Song) -> Unit = {},
     private val onFavoriteClick: (Song, Boolean) -> Unit,
+    private val onDownloadClick: (Song) -> Unit = {}, // Thêm callback cho tải xuống
     private val isManageMode: Boolean = false,
-    private val userId: String? = null
+    private val userId: String? = null,
+    private val isVip: Boolean = false // Thêm trạng thái VIP
 ) : RecyclerView.Adapter<SongAdapter.SongViewHolder>() {
 
     inner class SongViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
@@ -30,6 +32,7 @@ class SongAdapter(
         val btnEdit: ImageButton = itemView.findViewById(R.id.btnEdit)
         val btnDelete: ImageButton = itemView.findViewById(R.id.btnDelete)
         val btnFavorite: ImageView = itemView.findViewById(R.id.btnFavorite)
+        val btnDownload: ImageButton = itemView.findViewById(R.id.btnDownload) // Thêm nút tải xuống
 
         fun bind(song: Song, position: Int) {
             tvRank.text = if (position < 9) "Top 0${position + 1}" else "Top ${position + 1}"
@@ -63,10 +66,19 @@ class SongAdapter(
                 btnFavorite.visibility = View.GONE
             }
 
+            // Xử lý hiển thị nút "Tải xuống"
+            if (isVip && !isManageMode) {
+                btnDownload.visibility = View.VISIBLE
+                btnDownload.setOnClickListener { onDownloadClick(song) }
+            } else {
+                btnDownload.visibility = View.GONE
+            }
+
             if (isManageMode) {
                 btnEdit.visibility = View.VISIBLE
                 btnDelete.visibility = View.VISIBLE
                 btnFavorite.visibility = View.GONE
+                btnDownload.visibility = View.GONE // Ẩn nút tải khi ở chế độ quản lý
                 btnEdit.setOnClickListener { onEditClick(song) }
                 btnDelete.setOnClickListener { onDeleteClick(song) }
             } else {

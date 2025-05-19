@@ -87,5 +87,13 @@
             android:background="?attr/selectableItemBackgroundBorderless"
             android:visibility="gone" />
 
+        <ImageButton
+            android:id="@+id/btnDownload"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:src="@drawable/ic_download"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="Tải xuống"
+            android:visibility="gone" />
     </LinearLayout>
 </androidx.cardview.widget.CardView>

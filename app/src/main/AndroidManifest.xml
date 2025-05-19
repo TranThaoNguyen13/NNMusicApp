@@ -28,7 +28,10 @@
         </activity>
 
         <!-- Các Activity khác -->
-        <activity android:name=".MoMoPaymentActivity" />
+        <activity
+            android:name=".MomoPaymentActivity"
+            android:label="Momo Payment">
+        </activity>
         <activity android:name=".UpgradeActivity" />
         <activity android:name=".RegisterActivity" />
         <activity android:name=".MusicActivity" />

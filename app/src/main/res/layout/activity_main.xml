@@ -26,19 +26,33 @@
                 android:gravity="end"
                 android:layout_gravity="end">
 
-                <Button
+                <ImageButton
                     android:id="@+id/btnAuth"
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
+                    android:src="@drawable/ic_login"
+                    android:tint="@android:color/white"
+                    android:contentDescription="@string/login_logout_description"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:layout_marginEnd="8dp" />
+
+                <Button
+                    android:id="@+id/btnUpgradeVip"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Đăng nhập"
-                    android:layout_marginEnd="8dp" />
+                    android:text="Nâng VIP"
+                    android:visibility="gone"
+                    android:layout_marginEnd="8dp"
+
+                    android:background="#28A745"/>      <!-- chữ màu trắng -->
+
 
                 <ImageButton
                     android:id="@+id/btnFavorite"
                     android:layout_width="40dp"
                     android:layout_height="40dp"
                     android:src="@drawable/ic_favorite"
-                    android:contentDescription="Yêu thích"
+                    android:contentDescription="@string/favorite_description"
                     android:background="?attr/selectableItemBackgroundBorderless"
                     android:layout_marginEnd="8dp" />
             </LinearLayout>
@@ -61,7 +75,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
-                app:queryHint="Tìm kiếm bài hát..." />
+                app:queryHint="@string/search_hint" />
 
             <androidx.viewpager2.widget.ViewPager2
                 android:id="@+id/viewPager"
@@ -72,7 +86,7 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Danh sách Album"
+                android:text="@string/album_list_title"
                 android:textColor="#FFFFFF"
                 android:textSize="20sp"
                 android:textStyle="bold"
@@ -89,7 +103,7 @@
                 android:id="@+id/tvTrendingTitle"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Top 1 Trending"
+                android:text="@string/trending_title"
                 android:textColor="#FFFFFF"
                 android:textSize="20sp"
                 android:textStyle="bold"
@@ -109,14 +123,14 @@
                 android:src="@android:drawable/ic_menu_more"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 app:tint="#FFFFFF"
-                android:contentDescription="Xem thêm"
+                android:contentDescription="@string/view_more_description"
                 android:layout_gravity="center"
                 android:layout_marginTop="8dp" />
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Yêu thích của bạn"
+                android:text="@string/favorite_songs_title"
                 android:textColor="#FFFFFF"
                 android:textSize="20sp"
                 android:textStyle="bold"
@@ -132,7 +146,7 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Gợi ý cho bạn"
+                android:text="@string/recommendations_title"
                 android:textColor="#FFFFFF"
                 android:textSize="20sp"
                 android:textStyle="bold"
@@ -148,7 +162,6 @@
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>
 
-    <!-- Thêm ProgressBar tại đây -->
     <ProgressBar
         android:id="@+id/progressBar"
         android:layout_width="wrap_content"
