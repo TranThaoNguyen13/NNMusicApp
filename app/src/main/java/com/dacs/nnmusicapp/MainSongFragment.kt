@@ -30,6 +30,7 @@ class MainSongFragment : Fragment() {
     private lateinit var btnNext: ImageButton
     private var mediaPlayer: MediaPlayer? = null
     private val handler = Handler(Looper.getMainLooper())
+    private var isPrepared = false
 
     companion object {
         fun newInstance(songTitle: String, songArtist: String, songUrl: String, songThumbnail: String): MainSongFragment {
@@ -83,11 +84,19 @@ class MainSongFragment : Fragment() {
             return view
         }
 
+        setupMediaPlayer(songUrl)
+        setupButtons()
+
+        return view
+    }
+
+    private fun setupMediaPlayer(songUrl: String) {
         try {
             mediaPlayer?.release()
             mediaPlayer = MediaPlayer().apply {
                 setDataSource(songUrl)
                 setOnPreparedListener {
+                    isPrepared = true
                     Log.d("MainSongFragment", "MediaPlayer prepared, starting playback")
                     start()
                     btnPlayPause.setImageResource(android.R.drawable.ic_media_pause)
@@ -99,6 +108,7 @@ class MainSongFragment : Fragment() {
                 }
                 setOnErrorListener { mp, what, extra ->
                     Log.e("MainSongFragment", "MediaPlayer Error: what=$what, extra=$extra")
+                    isPrepared = false
                     when (what) {
                         MediaPlayer.MEDIA_ERROR_UNKNOWN -> {
                             if (extra == -2147483648) {
@@ -118,26 +128,36 @@ class MainSongFragment : Fragment() {
                             Toast.makeText(context, "Lỗi phát nhạc: $what", Toast.LENGTH_LONG).show()
                         }
                     }
-                    requireActivity().finish()
+                    mp.release()
+                    mediaPlayer = null
                     true
+                }
+                setOnCompletionListener {
+                    btnPlayPause.setImageResource(android.R.drawable.ic_media_play)
+                    isPrepared = false
                 }
                 prepareAsync()
             }
         } catch (e: Exception) {
             e.printStackTrace()
-            Log.e("MainSongFragment", "Error playing music: ${e.message}")
-            Toast.makeText(requireContext(), "Lỗi phát nhạc: ${e.message}", Toast.LENGTH_LONG).show()
+            Log.e("MainSongFragment", "Error setting up MediaPlayer: ${e.message}")
+            Toast.makeText(requireContext(), "Lỗi tải bài hát: ${e.message}", Toast.LENGTH_LONG).show()
+            mediaPlayer?.release()
+            mediaPlayer = null
             requireActivity().finish()
-            return view
         }
+    }
 
+    private fun setupButtons() {
         btnPlayPause.setOnClickListener {
             if (mediaPlayer?.isPlaying == true) {
                 mediaPlayer?.pause()
                 btnPlayPause.setImageResource(android.R.drawable.ic_media_play)
-            } else {
+            } else if (isPrepared) {
                 mediaPlayer?.start()
                 btnPlayPause.setImageResource(android.R.drawable.ic_media_pause)
+            } else {
+                Toast.makeText(requireContext(), "Đang tải bài hát...", Toast.LENGTH_SHORT).show()
             }
         }
 
@@ -151,7 +171,7 @@ class MainSongFragment : Fragment() {
 
         seekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
-                if (fromUser) {
+                if (fromUser && isPrepared) {
                     mediaPlayer?.seekTo(progress)
                     tvCurrentTime.text = formatTime(progress)
                 }
@@ -159,17 +179,17 @@ class MainSongFragment : Fragment() {
             override fun onStartTrackingTouch(seekBar: SeekBar?) {}
             override fun onStopTrackingTouch(seekBar: SeekBar?) {}
         })
-
-        return view
     }
 
     private fun updateSeekBar() {
         handler.postDelayed(object : Runnable {
             override fun run() {
                 try {
-                    val currentPosition = mediaPlayer?.currentPosition ?: 0
-                    seekBar.progress = currentPosition
-                    tvCurrentTime.text = formatTime(currentPosition)
+                    if (isPrepared) {
+                        val currentPosition = mediaPlayer?.currentPosition ?: 0
+                        seekBar.progress = currentPosition
+                        tvCurrentTime.text = formatTime(currentPosition)
+                    }
                     handler.postDelayed(this, 1000)
                 } catch (e: Exception) {
                     e.printStackTrace()

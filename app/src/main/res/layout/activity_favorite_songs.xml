@@ -18,6 +18,7 @@
             android:background="#1E1E1E"
             app:title="Yêu thích"
             app:titleTextColor="#FFFFFF"
+            app:navigationIcon="@drawable/ic_arrow_back"
             app:popupTheme="@style/Theme.NNMusicApp.PopupOverlay" />
 
     </com.google.android.material.appbar.AppBarLayout>

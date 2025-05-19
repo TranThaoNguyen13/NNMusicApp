@@ -72,6 +72,7 @@ dependencies {
     // Glide - chỉ cần một lần
     implementation("com.github.bumptech.glide:glide:4.12.0")
     implementation ("com.squareup.okhttp3:okhttp:4.12.0")
+    implementation ("com.google.android.material:material:1.9.0")
     // Testing
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

@@ -1,407 +1,324 @@
-    package com.dacs.nnmusicapp
+package com.dacs.nnmusicapp
 
-    import android.content.Context
-    import android.content.Intent
-    import android.os.Bundle
-    import android.os.Handler
-    import android.os.Looper
-    import android.util.Log
-    import android.view.View
-    import android.widget.Button
-    import android.widget.ImageButton
-    import android.widget.Toast
-    import androidx.appcompat.app.AppCompatActivity
-    import androidx.appcompat.widget.SearchView
-    import androidx.recyclerview.widget.LinearLayoutManager
-    import androidx.viewpager2.widget.ViewPager2
-    import com.android.volley.Request
-    import com.android.volley.RequestQueue
-    import com.android.volley.toolbox.JsonArrayRequest
-    import com.android.volley.toolbox.Volley
-    import com.dacs.nnmusicapp.databinding.ActivityMainBinding
-    import com.google.gson.Gson
-    import com.google.gson.reflect.TypeToken
-    import org.json.JSONException
+import android.content.Context
+import android.content.Intent
+import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
+import android.util.Log
+import android.view.View
+import android.widget.Button
+import android.widget.ImageButton
+import android.widget.Toast
+import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.widget.SearchView
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.viewpager2.widget.ViewPager2
+import com.android.volley.Request
+import com.android.volley.RequestQueue
+import com.android.volley.toolbox.JsonArrayRequest
+import com.android.volley.toolbox.JsonObjectRequest
+import com.android.volley.toolbox.Volley
+import com.dacs.nnmusicapp.databinding.ActivityMainBinding
+import org.json.JSONException
+import org.json.JSONObject
 
-    class MainActivity : AppCompatActivity() {
+class MainActivity : AppCompatActivity() {
 
-        companion object {
-            const val BASE_URL = "http://10.0.2.2:8000/api" // URL gốc của API Laravel
-        }
+    companion object {
+        const val BASE_URL = "http://10.0.2.2:8000/api"
+    }
 
-        private lateinit var binding: ActivityMainBinding
-        private lateinit var viewPager: ViewPager2
-        private lateinit var btnAuth: Button
-        private lateinit var btnFavorite: ImageButton
-        private lateinit var requestQueue: RequestQueue
-        private lateinit var albumAdapter: AlbumAdapter
-        private lateinit var trendingSongAdapter: SongAdapter
-        private lateinit var favoriteSongAdapter: SongAdapter
-        private var isLoggedIn = false
-        private var userId: String? = null
-        private val allTrendingSongs = mutableListOf<Song>() // Lưu trữ tất cả bài hát trending
-        private val displayedTrendingSongs = mutableListOf<Song>() // Lưu trữ bài hát trending đang hiển thị
-        private val favoriteSongs = mutableListOf<Song>()
-        private val gson = Gson()
-        private var isExpanded = false // Trạng thái: true nếu hiển thị 10 bài, false nếu hiển thị 3 bài
+    private lateinit var binding: ActivityMainBinding
+    private lateinit var viewPager: ViewPager2
+    private lateinit var btnAuth: Button
+    private lateinit var btnFavorite: ImageButton
+    private lateinit var requestQueue: RequestQueue
+    private lateinit var albumAdapter: AlbumAdapter
+    private lateinit var trendingSongAdapter: SongAdapter
+    private lateinit var favoriteSongAdapter: SongAdapter
+    private var isLoggedIn = false
+    private var userId: String? = null
+    private val allTrendingSongs = mutableListOf<Song>()
+    private val displayedTrendingSongs = mutableListOf<Song>()
+    private val favoriteSongs = mutableListOf<Song>()
+    private val albums = mutableListOf<Album>()
+    private var isExpanded = false
 
-        private val sliderImages = listOf(
-            "https://i.imgur.com/stW72UJ.png",
-            "https://i.imgur.com/vGm99k8.png",
-            "https://i.imgur.com/y7zP0U8.png"
+    private val sliderImages = listOf(
+        "https://i.imgur.com/stW72UJ.png",
+        "https://i.imgur.com/vGm99k8.png",
+        "https://i.imgur.com/y7zP0U8.png"
+    )
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+
+        val sharedPreferences = getSharedPreferences("UserPrefs", Context.MODE_PRIVATE)
+        isLoggedIn = sharedPreferences.getBoolean("isLoggedIn", false)
+        userId = sharedPreferences.getString("user_id", "default_user")
+
+        binding = ActivityMainBinding.inflate(layoutInflater)
+        setContentView(binding.root)
+
+        btnAuth = binding.btnAuth
+        btnFavorite = binding.btnFavorite
+        viewPager = binding.viewPager
+        binding.rvAlbums.layoutManager = LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false)
+        binding.rvRecommendations.layoutManager = LinearLayoutManager(this)
+        binding.rvTrendingSongs.layoutManager = LinearLayoutManager(this)
+        binding.rvFavoriteSongs.layoutManager = LinearLayoutManager(this)
+
+        setSupportActionBar(binding.toolbar)
+
+        albumAdapter = AlbumAdapter(
+            albums = albums,
+            onAlbumClick = { album ->
+                val intent = Intent(this, AlbumSongsActivity::class.java).apply {
+                    putExtra("albumId", album.id)
+                }
+                startActivity(intent)
+            }
         )
+        binding.rvAlbums.adapter = albumAdapter
 
-        override fun onCreate(savedInstanceState: Bundle?) {
-            super.onCreate(savedInstanceState)
-
-            // Kiểm tra trạng thái đăng nhập
-            val sharedPreferences = getSharedPreferences("UserPrefs", Context.MODE_PRIVATE)
-            isLoggedIn = sharedPreferences.getBoolean("isLoggedIn", false)
-            userId = sharedPreferences.getString("user_id", "default_user")
-
-            binding = ActivityMainBinding.inflate(layoutInflater)
-            setContentView(binding.root)
-
-            try {
-                // Ánh xạ các thành phần
-                btnAuth = binding.btnAuth
-                btnFavorite = binding.btnFavorite
-                viewPager = binding.viewPager
-                binding.rvAlbums.layoutManager = LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false)
-                binding.rvRecommendations.layoutManager = LinearLayoutManager(this)
-
-                // Thiết lập RecyclerView cho danh sách trending
-                binding.rvTrendingSongs.layoutManager = LinearLayoutManager(this)
-                displayedTrendingSongs.clear()
-                trendingSongAdapter = SongAdapter(
-                    context = this@MainActivity,
-                    songs = displayedTrendingSongs,
-                    onSongClick = { song ->
-                        if (isLoggedIn) {
-                            Log.d("MainActivity", "Song URL before passing to SongActivity: ${song.file_path}")
-                            if (song.file_path.isNullOrEmpty()) {
-                                Toast.makeText(this, "Không tìm thấy URL bài hát", Toast.LENGTH_SHORT).show()
-                            } else {
-                                val intent = Intent(this, SongActivity::class.java).apply {
-                                    putExtra("song_title", song.title)
-                                    putExtra("song_artist", song.artist)
-                                    putExtra("song_url", song.file_path)
-                                    putExtra("song_thumbnail", song.thumbnailUrl)
-                                    putExtra("song_lyrics", song.lyrics)
-                                }
-                                startActivity(intent)
-                            }
-                        } else {
-                            Toast.makeText(this, "Vui lòng đăng nhập để nghe nhạc", Toast.LENGTH_SHORT).show()
-                            startActivity(Intent(this, LoginActivity::class.java))
-                        }
-                    },
-                    onFavoriteClick = { song, isFavorite ->
-                        if (isLoggedIn) {
-                            Toast.makeText(this, if (isFavorite) "Đã thêm ${song.title} vào yêu thích" else "Đã xóa ${song.title} khỏi yêu thích", Toast.LENGTH_SHORT).show()
-                            updateFavoriteSongs()
-                        } else {
-                            Toast.makeText(this, "Vui lòng đăng nhập để thêm vào yêu thích", Toast.LENGTH_SHORT).show()
-                            startActivity(Intent(this, LoginActivity::class.java))
-                        }
-                    },
-                    isManageMode = false,
-                    userId = userId ?: "default_user"
-                )
-                binding.rvTrendingSongs.adapter = trendingSongAdapter
-
-                // Thiết lập RecyclerView cho danh sách yêu thích
-                binding.rvFavoriteSongs.layoutManager = LinearLayoutManager(this)
-                favoriteSongAdapter = SongAdapter(
-                    context = this@MainActivity,
-                    songs = favoriteSongs,
-                    onSongClick = { song ->
-                        if (isLoggedIn) {
-                            Log.d("MainActivity", "Song URL before passing to SongActivity: ${song.file_path}")
-                            if (song.file_path.isNullOrEmpty()) {
-                                Toast.makeText(this, "Không tìm thấy URL bài hát", Toast.LENGTH_SHORT).show()
-                            } else {
-                                val intent = Intent(this, SongActivity::class.java).apply {
-                                    putExtra("song_title", song.title)
-                                    putExtra("song_artist", song.artist)
-                                    putExtra("song_url", song.file_path)
-                                    putExtra("song_thumbnail", song.thumbnailUrl)
-                                    putExtra("song_lyrics", song.lyrics)
-                                }
-                                startActivity(intent)
-                            }
-                        } else {
-                            Toast.makeText(this, "Vui lòng đăng nhập để nghe nhạc", Toast.LENGTH_SHORT).show()
-                            startActivity(Intent(this, LoginActivity::class.java))
-                        }
-                    },
-                    onFavoriteClick = { song, isFavorite ->
-                        if (isLoggedIn) {
-                            Toast.makeText(this, if (isFavorite) "Đã thêm ${song.title} vào yêu thích" else "Đã xóa ${song.title} khỏi yêu thích", Toast.LENGTH_SHORT).show()
-                            updateFavoriteSongs()
-                        } else {
-                            Toast.makeText(this, "Vui lòng đăng nhập để thêm vào yêu thích", Toast.LENGTH_SHORT).show()
-                            startActivity(Intent(this, LoginActivity::class.java))
-                        }
-                    },
-                    isManageMode = false,
-                    userId = userId ?: "default_user"
-                )
-                binding.rvFavoriteSongs.adapter = favoriteSongAdapter
-
-                // Thiết lập Toolbar
-                setSupportActionBar(binding.toolbar)
-
-                // Cập nhật trạng thái nút đăng nhập/đăng xuất
-                updateAuthButton()
-
-                // Thiết lập ViewPager2 cho slider
-                setupSlider()
-
-                // Khởi tạo Volley RequestQueue
-                requestQueue = Volley.newRequestQueue(this)
-
-                // Gọi API
-                fetchAlbums()
-                fetchTrendingSongs()
-                fetchRecommendations()
-
-                // Xử lý nút đăng nhập/đăng xuất
-                btnAuth.setOnClickListener {
-                    if (isLoggedIn) {
-                        // Đăng xuất
-                        val sharedPreferences = getSharedPreferences("UserPrefs", Context.MODE_PRIVATE)
-                        sharedPreferences.edit().apply {
-                            putBoolean("isLoggedIn", false)
-                            putString("user_id", null)
-                            apply()
-                        }
-                        isLoggedIn = false
-                        userId = "default_user"
-                        updateAuthButton()
-                        updateFavoriteSongs()
-                        Toast.makeText(this, "Đã đăng xuất", Toast.LENGTH_SHORT).show()
-                    } else {
-                        // Đăng nhập
-                        startActivity(Intent(this, LoginActivity::class.java))
-                    }
+        trendingSongAdapter = SongAdapter(
+            context = this,
+            songs = displayedTrendingSongs,
+            favoriteSongs = favoriteSongs,
+            onSongClick = { song ->
+                if (isLoggedIn) {
+                    navigateToSongActivity(song)
+                } else {
+                    Toast.makeText(this, "Vui lòng đăng nhập để nghe nhạc", Toast.LENGTH_SHORT).show()
+                    startActivity(Intent(this, LoginActivity::class.java))
                 }
-
-                // Xử lý nút Yêu thích
-                btnFavorite.setOnClickListener {
-                    val intent = Intent(this, FavoriteSongsActivity::class.java)
-                    intent.putParcelableArrayListExtra("all_songs", ArrayList(allTrendingSongs))
-                    startActivity(intent)
+            },
+            onFavoriteClick = { song, isFavorite ->
+                if (isLoggedIn) {
+                    updateFavoriteOnServer(song, isFavorite)
+                } else {
+                    Toast.makeText(this, "Vui lòng đăng nhập để thêm vào yêu thích", Toast.LENGTH_SHORT).show()
+                    startActivity(Intent(this, LoginActivity::class.java))
                 }
+            },
+            isManageMode = false,
+            userId = userId
+        )
+        binding.rvTrendingSongs.adapter = trendingSongAdapter
 
-                // Xử lý nút "Xem thêm"/"Thu lại" cho danh sách trending
-                binding.btnToggleViewMore.setOnClickListener {
-                    toggleTrendingSongs()
+        favoriteSongAdapter = SongAdapter(
+            context = this,
+            songs = favoriteSongs,
+            favoriteSongs = favoriteSongs,
+            onSongClick = { song ->
+                if (isLoggedIn) {
+                    navigateToSongActivity(song)
+                } else {
+                    Toast.makeText(this, "Vui lòng đăng nhập để nghe nhạc", Toast.LENGTH_SHORT).show()
+                    startActivity(Intent(this, LoginActivity::class.java))
                 }
+            },
+            onFavoriteClick = { song, isFavorite ->
+                if (isLoggedIn) {
+                    updateFavoriteOnServer(song, isFavorite)
+                } else {
+                    Toast.makeText(this, "Vui lòng đăng nhập để thêm vào yêu thích", Toast.LENGTH_SHORT).show()
+                    startActivity(Intent(this, LoginActivity::class.java))
+                }
+            },
+            isManageMode = false,
+            userId = userId
+        )
+        binding.rvFavoriteSongs.adapter = favoriteSongAdapter
 
-                // Xử lý SearchView
-                binding.searchView.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
-                    override fun onQueryTextSubmit(query: String?): Boolean {
-                        Toast.makeText(this@MainActivity, "Tìm kiếm: $query", Toast.LENGTH_SHORT).show()
-                        return true
-                    }
+        updateAuthButton()
+        setupSlider()
+        requestQueue = Volley.newRequestQueue(this)
+        fetchAlbums()
+        fetchTrendingSongs()
+        fetchRecommendations()
 
-                    override fun onQueryTextChange(newText: String?): Boolean {
-                        return false
-                    }
-                })
-            } catch (e: Exception) {
-                e.printStackTrace()
-                Toast.makeText(this, "Lỗi khởi tạo MainActivity: ${e.message}", Toast.LENGTH_LONG).show()
-            }
-        }
-
-        private fun updateAuthButton() {
+        btnAuth.setOnClickListener {
             if (isLoggedIn) {
-                btnAuth.text = "Đăng xuất"
+                sharedPreferences.edit().apply {
+                    putBoolean("isLoggedIn", false)
+                    putString("user_id", null)
+                    apply()
+                }
+                isLoggedIn = false
+                userId = "default_user"
+                updateAuthButton()
+                favoriteSongs.clear()
+                favoriteSongAdapter.notifyDataSetChanged()
+                Toast.makeText(this, "Đã đăng xuất", Toast.LENGTH_SHORT).show()
             } else {
-                btnAuth.text = "Đăng nhập"
+                startActivity(Intent(this, LoginActivity::class.java))
             }
         }
 
-        private fun setupSlider() {
-            try {
-                val sliderAdapter = SliderAdapter(sliderImages)
-                viewPager.adapter = sliderAdapter
+        btnFavorite.setOnClickListener {
+            val intent = Intent(this, FavoriteSongsActivity::class.java)
+            intent.putParcelableArrayListExtra("all_songs", ArrayList(allTrendingSongs))
+            startActivity(intent)
+        }
 
-                // Tự động cuộn sau 3 giây
-                val handler = Handler(Looper.getMainLooper())
-                val runnable = object : Runnable {
-                    override fun run() {
-                        val currentItem = viewPager.currentItem
-                        val nextItem = if (currentItem == sliderImages.size - 1) 0 else currentItem + 1
-                        viewPager.setCurrentItem(nextItem, true)
-                        handler.postDelayed(this, 3000)
+        binding.btnToggleViewMore.setOnClickListener {
+            toggleTrendingSongs()
+        }
+
+        binding.searchView.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
+            override fun onQueryTextSubmit(query: String?): Boolean {
+                Toast.makeText(this@MainActivity, "Tìm kiếm: $query", Toast.LENGTH_SHORT).show()
+                return true
+            }
+            override fun onQueryTextChange(newText: String?): Boolean = false
+        })
+    }
+
+    private fun updateAuthButton() {
+        btnAuth.text = if (isLoggedIn) "Đăng xuất" else "Đăng nhập"
+    }
+
+    private fun setupSlider() {
+        val sliderAdapter = SliderAdapter(sliderImages)
+        viewPager.adapter = sliderAdapter
+        val handler = Handler(Looper.getMainLooper())
+        val runnable = object : Runnable {
+            override fun run() {
+                val currentItem = viewPager.currentItem
+                val nextItem = if (currentItem == sliderImages.size - 1) 0 else currentItem + 1
+                viewPager.setCurrentItem(nextItem, true)
+                handler.postDelayed(this, 3000)
+            }
+        }
+        handler.postDelayed(runnable, 3000)
+    }
+
+    private fun fetchAlbums() {
+        val url = "$BASE_URL/albums"
+        binding.progressBar?.visibility = View.VISIBLE
+        val request = JsonArrayRequest(
+            Request.Method.GET, url, null,
+            { response ->
+                binding.progressBar?.visibility = View.GONE
+                try {
+                    albums.clear()
+                    if (response.length() == 0) {
+                        Toast.makeText(this, "Không có album nào", Toast.LENGTH_SHORT).show()
+                        return@JsonArrayRequest
                     }
+                    for (i in 0 until response.length()) {
+                        val jsonObject = response.getJSONObject(i)
+                        val album = Album(
+                            id = jsonObject.getInt("id"),
+                            title = jsonObject.getString("title"),
+                            artist = jsonObject.optString("artist", null),
+                            coverUrl = jsonObject.optString("cover_url", null)
+                        )
+                        albums.add(album)
+                    }
+                    albumAdapter.notifyDataSetChanged()
+                } catch (e: JSONException) {
+                    Log.e("MainActivity", "Error parsing albums: ${e.message}")
+                    Toast.makeText(this, "Lỗi phân tích dữ liệu album: ${e.message}", Toast.LENGTH_LONG).show()
                 }
-                handler.postDelayed(runnable, 3000)
-            } catch (e: Exception) {
-                e.printStackTrace()
-                Toast.makeText(this, "Lỗi thiết lập slider: ${e.message}", Toast.LENGTH_LONG).show()
+            },
+            { error ->
+                binding.progressBar?.visibility = View.GONE
+                Log.e("MainActivity", "Error fetching albums: ${error.message}")
+                Toast.makeText(this, "Lỗi kết nối API albums: ${error.message}", Toast.LENGTH_LONG).show()
             }
-        }
+        )
+        requestQueue.add(request)
+    }
 
-        private val albums = mutableListOf<Album>()
-
-        private fun fetchAlbums() {
-            val url = "$BASE_URL/albums"
-            Log.d("MainActivity", "Fetching albums from: $url")
-            binding.progressBar?.visibility = View.VISIBLE
-            val request = JsonArrayRequest(
-                Request.Method.GET, url, null,
-                { response ->
-                    binding.progressBar?.visibility = View.GONE
-                    Log.d("MainActivity", "Albums response: $response")
-                    try {
-                        albums.clear()
-                        if (response.length() == 0) {
-                            Log.w("MainActivity", "No albums found from API")
-                            Toast.makeText(this, "Không có album nào", Toast.LENGTH_SHORT).show()
-                            return@JsonArrayRequest
-                        }
-                        for (i in 0 until response.length()) {
-                            val jsonObject = response.getJSONObject(i)
-                            val album = Album(
-                                id = jsonObject.getInt("id"),
-                                title = jsonObject.getString("title"),
-                                artist = jsonObject.optString("artist", null),
-                                coverUrl = jsonObject.optString("cover_url", null)
-                            )
-                            albums.add(album)
-                        }
-                        if (!::albumAdapter.isInitialized) {
-                            albumAdapter = AlbumAdapter(
-                                albums = albums,
-                                onAlbumClick = { album ->
-                                    val intent = Intent(this, AlbumSongsActivity::class.java).apply {
-                                        putExtra("albumId", album.id)
-                                    }
-                                    startActivity(intent)
-                                }
-                            )
-                            binding.rvAlbums.adapter = albumAdapter
+    private fun fetchTrendingSongs() {
+        val url = "$BASE_URL/songs/trending"
+        binding.progressBar?.visibility = View.VISIBLE
+        val request = JsonArrayRequest(
+            Request.Method.GET, url, null,
+            { response ->
+                binding.progressBar?.visibility = View.GONE
+                try {
+                    allTrendingSongs.clear()
+                    for (i in 0 until response.length()) {
+                        val jsonObject = response.getJSONObject(i)
+                        val file_path = jsonObject.optString("file_path", null)
+                        val adjustedFilepath = if (!file_path.isNullOrEmpty() && !file_path.startsWith("http")) {
+                            "http://10.0.2.2:8000/$file_path"
                         } else {
-                            albumAdapter.notifyDataSetChanged()
+                            file_path
                         }
-                        Log.d("MainActivity", "Fetched albums: $albums")
-                    } catch (e: JSONException) {
-                        Log.e("MainActivity", "Error parsing albums: ${e.message}")
-                        Toast.makeText(this, "Lỗi phân tích dữ liệu album: ${e.message}", Toast.LENGTH_LONG).show()
+                        val song = Song(
+                            id = jsonObject.getInt("id"),
+                            title = jsonObject.getString("title"),
+                            artist = jsonObject.getString("artist"),
+                            file_path = adjustedFilepath,
+                            quality = jsonObject.optString("quality", null),
+                            trendingScore = jsonObject.optInt("trending_score", 0),
+                            isRecommended = jsonObject.optInt("is_recommended", 0) == 1,
+                            thumbnailUrl = jsonObject.optString("thumbnail_url", null),
+                            albumId = jsonObject.optInt("album_id", 0),
+                            lyrics = jsonObject.optString("lyrics", null)
+                        )
+                        allTrendingSongs.add(song)
                     }
-                },
-                { error ->
-                    binding.progressBar?.visibility = View.GONE
-                    Log.e("MainActivity", "Volley error: ${error.message}")
-                    Log.e("MainActivity", "Network response: ${error.networkResponse?.statusCode}")
-                    Log.e("MainActivity", "Error details: ${error.networkResponse?.data?.let { String(it) }}")
-                    Toast.makeText(this, "Error fetching albums: ${error.message}", Toast.LENGTH_LONG).show()
+                    allTrendingSongs.sortByDescending { it.trendingScore }
+                    updateTrendingSongs()
+                    updateFavoriteSongsFromServer()
+                } catch (e: JSONException) {
+                    Log.e("MainActivity", "Error parsing trending songs: ${e.message}")
+                    Toast.makeText(this, "Lỗi phân tích dữ liệu trending: ${e.message}", Toast.LENGTH_LONG).show()
                 }
-            )
-            requestQueue.add(request)
-        }
+            },
+            { error ->
+                binding.progressBar?.visibility = View.GONE
+                Log.e("MainActivity", "Error fetching trending songs: ${error.message}")
+                Toast.makeText(this, "Lỗi kết nối API trending: ${error.message}", Toast.LENGTH_LONG).show()
+            }
+        )
+        requestQueue.add(request)
+    }
 
-        private fun fetchTrendingSongs() {
-            val url = "$BASE_URL/songs/trending"
-            binding.progressBar?.visibility = View.VISIBLE
-            val request = JsonArrayRequest(
-                Request.Method.GET, url, null,
-                { response ->
-                    binding.progressBar?.visibility = View.GONE
-                    Log.d("MainActivity", "API Response: $response")
-                    try {
-                        allTrendingSongs.clear()
-                        for (i in 0 until response.length()) {
-                            val jsonObject = response.getJSONObject(i)
-                            val file_path = jsonObject.optString("file_path", null)
-                            val adjustedFilepath = if (!file_path.isNullOrEmpty() && !file_path.startsWith("http")) {
-                                "http://10.0.2.2:8000/$file_path" // Điều chỉnh cho emulator
-                            } else {
-                                file_path
-                            }
-                            val song = Song(
-                                id = jsonObject.getInt("id"),
-                                title = jsonObject.getString("title"),
-                                artist = jsonObject.getString("artist"),
-                                file_path = adjustedFilepath,
-                                quality = jsonObject.optString("quality", null),
-                                trendingScore = if (jsonObject.isNull("trending_score")) null else jsonObject.optInt("trending_score", 0),
-                                isRecommended = if (jsonObject.isNull("is_recommended")) null else jsonObject.optInt("is_recommended", 0) == 1,
-                                thumbnailUrl = jsonObject.optString("thumbnail_url", null),
-                                albumId = if (jsonObject.isNull("album_id")) null else jsonObject.optInt("album_id", 0),
-                                lyrics = jsonObject.optString("lyrics", null)
-                            )
-                            allTrendingSongs.add(song)
-                        }
-                        allTrendingSongs.sortByDescending { it.trendingScore ?: 0 }
-                        updateTrendingSongs()
-                        updateFavoriteSongs()
-                    } catch (e: JSONException) {
-                        Log.e("MainActivity", "Error parsing response: ${e.message}")
-                        Toast.makeText(this, "Lỗi phân tích dữ liệu: ${e.message}", Toast.LENGTH_LONG).show()
-                    }
-                },
-                { error ->
-                    binding.progressBar?.visibility = View.GONE
-                    Log.e("MainActivity", "Error fetching trending songs: ${error.message}")
-                    Toast.makeText(this, "Lỗi kết nối API: ${error.message}", Toast.LENGTH_LONG).show()
-                }
-            )
-            requestQueue.add(request)
-        }
-
-        private fun fetchRecommendations() {
-            val url = "$BASE_URL/songs/recommendations"
-
-            binding.progressBar?.visibility = View.VISIBLE // Hiển thị loading
-            val jsonArrayRequest = JsonArrayRequest(
-                Request.Method.GET, url, null,
-                { response ->
-                    binding.progressBar?.visibility = View.GONE // Ẩn loading
+    private fun fetchRecommendations() {
+        val url = "$BASE_URL/songs/recommendations"
+        binding.progressBar?.visibility = View.VISIBLE
+        val request = JsonArrayRequest(
+            Request.Method.GET, url, null,
+            { response ->
+                binding.progressBar?.visibility = View.GONE
+                try {
                     val songs = mutableListOf<Song>()
                     for (i in 0 until response.length()) {
-                        try {
-                            val jsonObject = response.getJSONObject(i)
-                            val song = Song(
-                                id = jsonObject.getInt("id"),
-                                title = jsonObject.getString("title"),
-                                artist = jsonObject.getString("artist"),
-                                file_path = jsonObject.optString("file_path", null),
-                                quality = jsonObject.optString("quality", null),
-                                trendingScore = if (jsonObject.isNull("trending_score")) null else jsonObject.optInt("trending_score", 0),
-                                isRecommended = if (jsonObject.isNull("is_recommended")) null else jsonObject.optInt("is_recommended", 0) == 1,
-                                thumbnailUrl = jsonObject.optString("thumbnail_url", null),
-                                albumId = if (jsonObject.isNull("album_id")) null else jsonObject.optInt("album_id", 0),
-                                lyrics = jsonObject.optString("lyrics", null)
-                            )
-                            songs.add(song)
-                        } catch (e: JSONException) {
-                            e.printStackTrace()
-                            Toast.makeText(this, "Lỗi phân tích dữ liệu gợi ý", Toast.LENGTH_SHORT).show()
+                        val jsonObject = response.getJSONObject(i)
+                        val file_path = jsonObject.optString("file_path", null)
+                        val adjustedFilepath = if (!file_path.isNullOrEmpty() && !file_path.startsWith("http")) {
+                            "http://10.0.2.2:8000/$file_path"
+                        } else {
+                            file_path
                         }
+                        val song = Song(
+                            id = jsonObject.getInt("id"),
+                            title = jsonObject.getString("title"),
+                            artist = jsonObject.getString("artist"),
+                            file_path = adjustedFilepath,
+                            quality = jsonObject.optString("quality", null),
+                            trendingScore = jsonObject.optInt("trending_score", 0),
+                            isRecommended = jsonObject.optInt("is_recommended", 0) == 1,
+                            thumbnailUrl = jsonObject.optString("thumbnail_url", null),
+                            albumId = jsonObject.optInt("album_id", 0),
+                            lyrics = jsonObject.optString("lyrics", null)
+                        )
+                        songs.add(song)
                     }
                     binding.rvRecommendations.adapter = SongAdapter(
-                        context = this@MainActivity,
+                        context = this,
                         songs = songs,
-                        onSongClick = { selectedSong ->
+                        favoriteSongs = favoriteSongs,
+                        onSongClick = { song ->
                             if (isLoggedIn) {
-                                Log.d("MainActivity", "Song URL before passing to SongActivity: ${selectedSong.file_path}")
-                                if (selectedSong.file_path.isNullOrEmpty()) {
-                                    Toast.makeText(this, "Không tìm thấy URL bài hát", Toast.LENGTH_SHORT).show()
-                                } else {
-                                    val intent = Intent(this, SongActivity::class.java).apply {
-                                        putExtra("song_title", selectedSong.title)
-                                        putExtra("song_artist", selectedSong.artist)
-                                        putExtra("song_url", selectedSong.file_path)
-                                        putExtra("song_thumbnail", selectedSong.thumbnailUrl)
-                                        putExtra("song_lyrics", selectedSong.lyrics)
-                                    }
-                                    startActivity(intent)
-                                }
+                                navigateToSongActivity(song)
                             } else {
                                 Toast.makeText(this, "Vui lòng đăng nhập để nghe nhạc", Toast.LENGTH_SHORT).show()
                                 startActivity(Intent(this, LoginActivity::class.java))
@@ -409,62 +326,143 @@
                         },
                         onFavoriteClick = { song, isFavorite ->
                             if (isLoggedIn) {
-                                Toast.makeText(this, if (isFavorite) "Đã thêm ${song.title} vào yêu thích" else "Đã xóa ${song.title} khỏi yêu thích", Toast.LENGTH_SHORT).show()
-                                updateFavoriteSongs()
+                                updateFavoriteOnServer(song, isFavorite)
                             } else {
                                 Toast.makeText(this, "Vui lòng đăng nhập để thêm vào yêu thích", Toast.LENGTH_SHORT).show()
                                 startActivity(Intent(this, LoginActivity::class.java))
                             }
                         },
                         isManageMode = false,
-                        userId = userId ?: "default_user"
+                        userId = userId
                     )
-                },
-                { error ->
-                    binding.progressBar?.visibility = View.GONE // Ẩn loading
-                    Toast.makeText(this, "Lỗi khi lấy gợi ý bài hát: ${error.message}", Toast.LENGTH_LONG).show()
+                } catch (e: JSONException) {
+                    Log.e("MainActivity", "Error parsing recommendations: ${e.message}")
+                    Toast.makeText(this, "Lỗi phân tích dữ liệu gợi ý: ${e.message}", Toast.LENGTH_LONG).show()
                 }
-            )
-            requestQueue.add(jsonArrayRequest)
+            },
+            { error ->
+                binding.progressBar?.visibility = View.GONE
+                Log.e("MainActivity", "Error fetching recommendations: ${error.message}")
+                Toast.makeText(this, "Lỗi kết nối API recommendations: ${error.message}", Toast.LENGTH_LONG).show()
+            }
+        )
+        requestQueue.add(request)
+    }
+
+    private fun updateFavoriteOnServer(song: Song, isFavorite: Boolean) {
+        if (userId == null || song.id == null) {
+            Log.e("MainActivity", "Invalid userId or songId: userId=$userId, songId=${song.id}")
+            Toast.makeText(this, "Không thể cập nhật yêu thích: Dữ liệu không hợp lệ", Toast.LENGTH_LONG).show()
+            return
         }
 
-        private fun updateFavoriteSongs() {
-            val sharedPreferences = getSharedPreferences("favorites_${userId}", MODE_PRIVATE)
-            val favoritesJson = sharedPreferences.getString("favorite_songs", "[]")
-            val type = object : TypeToken<MutableSet<Int>>() {}.type
-            val favoriteSongIds: MutableSet<Int> = gson.fromJson(favoritesJson, type) ?: mutableSetOf()
+        val url = if (isFavorite) "$BASE_URL/favorites/add" else "$BASE_URL/favorites/remove"
+        val requestBody = JSONObject().apply {
+            put("user_id", userId)
+            put("song_id", song.id)
+        }
 
-            favoriteSongs.clear()
-            favoriteSongs.addAll(allTrendingSongs.filter { favoriteSongIds.contains(it.id) })
-            if (::favoriteSongAdapter.isInitialized) {
-                favoriteSongAdapter.notifyDataSetChanged()
+        val jsonRequest = object : JsonObjectRequest(
+            Request.Method.POST, url, requestBody,
+            { response ->
+                Log.d("MainActivity", "Server response: $response")
+                Toast.makeText(this, response.optString("message", "Cập nhật thành công"), Toast.LENGTH_SHORT).show()
+                updateFavoriteSongsFromServer()
+            },
+            { error ->
+                Log.e("MainActivity", "Error updating favorite: ${error.message}")
+                Log.e("MainActivity", "Network response: ${error.networkResponse?.statusCode}")
+                Log.e("MainActivity", "Error details: ${error.networkResponse?.data?.let { String(it) }}")
+                Toast.makeText(this, "Lỗi cập nhật yêu thích: ${error.message ?: "Không xác định"}", Toast.LENGTH_LONG).show()
+            }
+        ) {
+            override fun getHeaders(): MutableMap<String, String> {
+                val headers = HashMap<String, String>()
+                headers["Content-Type"] = "application/json"
+                return headers
             }
         }
+        requestQueue.add(jsonRequest)
+    }
 
-        private fun updateTrendingSongs() {
-            displayedTrendingSongs.clear()
-            val displayCount = if (isExpanded) 10 else 3 // Hiển thị 10 bài nếu mở rộng, 3 bài nếu thu gọn
-            displayedTrendingSongs.addAll(allTrendingSongs.take(displayCount))
-            trendingSongAdapter.notifyDataSetChanged()
+    private fun updateFavoriteSongsFromServer() {
+        val url = "$BASE_URL/favorites/${userId ?: "default_user"}"
+        val request = JsonObjectRequest(
+            Request.Method.GET, url, null,
+            { response ->
+                val favoritesArray = response.optJSONArray("favorites")
+                favoriteSongs.clear()
+                if (favoritesArray != null) {
+                    for (i in 0 until favoritesArray.length()) {
+                        val jsonObject = favoritesArray.getJSONObject(i)
+                        val song = Song(
+                            id = jsonObject.getJSONObject("song").getInt("id"),
+                            title = jsonObject.getJSONObject("song").getString("title"),
+                            artist = jsonObject.getJSONObject("song").getString("artist"),
+                            file_path = jsonObject.getJSONObject("song").optString("file_path", null),
+                            quality = jsonObject.getJSONObject("song").optString("quality", null),
+                            trendingScore = jsonObject.getJSONObject("song").optInt("trending_score", 0),
+                            isRecommended = jsonObject.getJSONObject("song").optInt("is_recommended", 0) == 1,
+                            thumbnailUrl = jsonObject.getJSONObject("song").optString("thumbnail_url", null),
+                            albumId = jsonObject.getJSONObject("song").optInt("album_id", 0),
+                            lyrics = jsonObject.getJSONObject("song").optString("lyrics", null)
+                        )
+                        favoriteSongs.add(song)
+                    }
+                }
+                favoriteSongAdapter.notifyDataSetChanged()
+                trendingSongAdapter.notifyDataSetChanged() // Cập nhật trạng thái yêu thích trong danh sách trending
+            },
+            { error ->
+                Log.e("MainActivity", "Error fetching favorites: ${error.message}")
+                Toast.makeText(this, "Lỗi lấy danh sách yêu thích: ${error.message}", Toast.LENGTH_LONG).show()
+            }
+        )
+        requestQueue.add(request)
+    }
 
-            // Cập nhật icon của nút "Xem thêm"/"Thu lại"
-            binding.btnToggleViewMore.setImageResource(
-                if (isExpanded) android.R.drawable.ic_menu_close_clear_cancel // Icon "Thu lại"
-                else android.R.drawable.ic_menu_more // Icon "Xem thêm"
-            )
-        }
-
-        private fun toggleTrendingSongs() {
-            isExpanded = !isExpanded
-            updateTrendingSongs()
-        }
-
-        override fun onResume() {
-            super.onResume()
-            val sharedPreferences = getSharedPreferences("UserPrefs", Context.MODE_PRIVATE)
-            isLoggedIn = sharedPreferences.getBoolean("isLoggedIn", false)
-            userId = sharedPreferences.getString("user_id", "default_user")
-            updateAuthButton()
-            updateFavoriteSongs()
+    private fun navigateToSongActivity(song: Song) {
+        Log.d("MainActivity", "Song URL before passing to SongActivity: ${song.file_path}")
+        if (song.file_path.isNullOrEmpty()) {
+            Toast.makeText(this, "Không tìm thấy URL bài hát", Toast.LENGTH_SHORT).show()
+        } else {
+            val intent = Intent(this, SongActivity::class.java).apply {
+                putExtra("song_title", song.title)
+                putExtra("song_artist", song.artist)
+                putExtra("song_url", song.file_path)
+                putExtra("song_thumbnail", song.thumbnailUrl)
+                putExtra("song_lyrics", song.lyrics)
+            }
+            startActivity(intent)
         }
     }
+
+    private fun updateTrendingSongs() {
+        displayedTrendingSongs.clear()
+        val displayCount = if (isExpanded) 10 else 3
+        displayedTrendingSongs.addAll(allTrendingSongs.take(displayCount))
+        trendingSongAdapter.notifyDataSetChanged()
+        binding.btnToggleViewMore.setImageResource(
+            if (isExpanded) android.R.drawable.ic_menu_close_clear_cancel else android.R.drawable.ic_menu_more
+        )
+    }
+
+    private fun toggleTrendingSongs() {
+        isExpanded = !isExpanded
+        updateTrendingSongs()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        val sharedPreferences = getSharedPreferences("UserPrefs", Context.MODE_PRIVATE)
+        isLoggedIn = sharedPreferences.getBoolean("isLoggedIn", false)
+        userId = sharedPreferences.getString("user_id", "default_user")
+        updateAuthButton()
+        if (isLoggedIn) {
+            updateFavoriteSongsFromServer()
+        } else {
+            favoriteSongs.clear()
+            favoriteSongAdapter.notifyDataSetChanged()
+        }
+    }
+}

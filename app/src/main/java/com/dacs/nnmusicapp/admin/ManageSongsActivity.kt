@@ -53,6 +53,7 @@ class ManageSongsActivity : AppCompatActivity() {
         songAdapter = SongAdapter(
             context = this,
             songs = songs,
+            favoriteSongs = emptyList(), // Truyền danh sách rỗng vì không cần tính năng yêu thích
             onSongClick = { /* Không cần xử lý click vào bài hát trong chế độ quản lý */ },
             onEditClick = { song -> showEditSongDialog(song) },
             onDeleteClick = { song -> deleteSong(song) },
@@ -88,8 +89,8 @@ class ManageSongsActivity : AppCompatActivity() {
                             artist = songJson.getString("artist"),
                             file_path = if (songJson.isNull("file_path")) null else songJson.getString("url"),
                             quality = if (songJson.isNull("quality")) null else songJson.getString("quality"),
-                            trendingScore = if (songJson.isNull("trending_score")) null else songJson.getInt("trending_score"),
-                            isRecommended = if (songJson.isNull("is_recommended")) null else songJson.getInt("is_recommended") == 1,
+                            trendingScore = if (songJson.isNull("trending_score")) 0 else songJson.getInt("trending_score"),
+                            isRecommended = if (songJson.isNull("is_recommended")) false else songJson.getInt("is_recommended") == 1,
                             thumbnailUrl = if (songJson.isNull("thumbnail_url")) null else songJson.getString("thumbnail_url"),
                             albumId = if (songJson.isNull("album_id")) null else songJson.getInt("album_id"),
                             lyrics = if (songJson.isNull("lyrics")) null else songJson.getString("lyrics")
@@ -368,5 +369,10 @@ class ManageSongsActivity : AppCompatActivity() {
             }
             .setNegativeButton("Hủy", null)
             .show()
+    }
+
+    override fun onBackPressed() {
+        super.onBackPressed()
+        finish()
     }
 }

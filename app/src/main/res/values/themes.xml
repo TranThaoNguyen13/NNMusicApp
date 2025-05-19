@@ -14,5 +14,8 @@
     <style name="Theme.NNMusicApp.AppBarOverlay" parent="ThemeOverlay.AppCompat.Dark.ActionBar" />
 
     <!-- Theme cho PopupOverlay -->
-    <style name="Theme.NNMusicApp.PopupOverlay" parent="ThemeOverlay.AppCompat.Light" />
+    <style name="Theme.NNMusicApp.PopupOverlay" parent="ThemeOverlay.AppCompat.Dark">
+        <item name="android:background">#1E1E1E</item> <!-- Màu nền tối cho popup -->
+        <item name="android:textColor">#FFFFFF</item> <!-- Màu chữ trắng -->
+    </style>
 </resources>

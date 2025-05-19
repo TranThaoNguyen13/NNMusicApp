@@ -1,111 +1,162 @@
 package com.dacs.nnmusicapp
 
+import android.content.Context
 import android.content.Intent
 import android.os.Bundle
+import android.util.Log
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
+import com.android.volley.Request
+import com.android.volley.RequestQueue
+import com.android.volley.toolbox.JsonObjectRequest
+import com.android.volley.toolbox.Volley
 import com.dacs.nnmusicapp.databinding.ActivityFavoriteSongsBinding
-import com.google.gson.Gson
-import com.google.gson.reflect.TypeToken
+import org.json.JSONException
+import org.json.JSONObject
 
 class FavoriteSongsActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityFavoriteSongsBinding
     private lateinit var favoriteSongAdapter: SongAdapter
     private val favoriteSongs = mutableListOf<Song>()
-    private val gson = Gson()
+    private lateinit var requestQueue: RequestQueue
     private var userId: String? = null
     private var isLoggedIn = false
-    private val allSongs = mutableListOf<Song>() // Lưu trữ tất cả bài hát để lọc danh sách yêu thích
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityFavoriteSongsBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        // Thiết lập Toolbar
-        setSupportActionBar(binding.toolbar)
-        supportActionBar?.setDisplayHomeAsUpEnabled(true)
-
-        // Lấy userId và trạng thái đăng nhập từ SharedPreferences
-        val sharedPreferences = getSharedPreferences("UserPrefs", MODE_PRIVATE)
+        val sharedPreferences = getSharedPreferences("UserPrefs", Context.MODE_PRIVATE)
         isLoggedIn = sharedPreferences.getBoolean("isLoggedIn", false)
         userId = sharedPreferences.getString("user_id", "default_user")
 
-        // Kiểm tra đăng nhập
-        if (!isLoggedIn) {
+        if (!isLoggedIn || userId == null) {
             Toast.makeText(this, "Vui lòng đăng nhập để xem danh sách yêu thích", Toast.LENGTH_SHORT).show()
-            startActivity(Intent(this, LoginActivity::class.java))
             finish()
             return
         }
 
-        // Lấy danh sách tất cả bài hát từ Intent (truyền từ MainActivity)
-        val songs: ArrayList<Song>? = intent.getParcelableArrayListExtra("all_songs")
-        if (songs != null) {
-            allSongs.clear()
-            allSongs.addAll(songs)
-        } else {
-            Toast.makeText(this, "Không tìm thấy danh sách bài hát", Toast.LENGTH_SHORT).show()
-            finish()
-            return
-        }
-
-        // Thiết lập RecyclerView cho danh sách yêu thích
         binding.rvFavoriteSongs.layoutManager = LinearLayoutManager(this)
         favoriteSongAdapter = SongAdapter(
-            context = this@FavoriteSongsActivity,
+            context = this,
             songs = favoriteSongs,
+            favoriteSongs = favoriteSongs,
             onSongClick = { song ->
-                if (song.file_path.isNullOrEmpty()) {
-                    Toast.makeText(this, "Không tìm thấy URL bài hát", Toast.LENGTH_SHORT).show()
+                if (isLoggedIn) {
+                    navigateToSongActivity(song)
                 } else {
-                    val intent = Intent(this, SongActivity::class.java).apply {
-                        putExtra("song_title", song.title)
-                        putExtra("song_artist", song.artist)
-                        putExtra("song_url", song.file_path)
-                        putExtra("song_thumbnail", song.thumbnailUrl)
-                        putExtra("song_lyrics", song.lyrics)
-                    }
-                    startActivity(intent)
+                    Toast.makeText(this, "Vui lòng đăng nhập để nghe nhạc", Toast.LENGTH_SHORT).show()
+                    startActivity(Intent(this, LoginActivity::class.java))
                 }
             },
             onFavoriteClick = { song, isFavorite ->
-                Toast.makeText(
-                    this,
-                    if (isFavorite) "Đã thêm ${song.title} vào yêu thích" else "Đã xóa ${song.title} khỏi yêu thích",
-                    Toast.LENGTH_SHORT
-                ).show()
-                updateFavoriteSongs()
+                if (isLoggedIn) {
+                    updateFavoriteOnServer(song, isFavorite)
+                } else {
+                    Toast.makeText(this, "Vui lòng đăng nhập để thêm vào yêu thích", Toast.LENGTH_SHORT).show()
+                    startActivity(Intent(this, LoginActivity::class.java))
+                }
             },
             isManageMode = false,
-            userId = userId ?: "default_user"
+            userId = userId
         )
         binding.rvFavoriteSongs.adapter = favoriteSongAdapter
 
-        // Lấy danh sách bài hát yêu thích
-        updateFavoriteSongs()
+        requestQueue = Volley.newRequestQueue(this)
+        updateFavoriteSongsFromServer()
+
+
     }
 
-    private fun updateFavoriteSongs() {
-        val sharedPreferences = getSharedPreferences("favorites_${userId}", MODE_PRIVATE)
-        val favoritesJson = sharedPreferences.getString("favorite_songs", "[]")
-        val type = object : TypeToken<MutableSet<Int>>() {}.type
-        val favoriteSongIds: MutableSet<Int> = gson.fromJson(favoritesJson, type) ?: mutableSetOf()
-
-        favoriteSongs.clear()
-        favoriteSongs.addAll(allSongs.filter { favoriteSongIds.contains(it.id) })
-        favoriteSongAdapter.notifyDataSetChanged()
+    private fun updateFavoriteSongsFromServer() {
+        val url = "${MainActivity.BASE_URL}/favorites/${userId ?: "default_user"}"
+        val request = JsonObjectRequest(
+            Request.Method.GET, url, null,
+            { response ->
+                val favoritesArray = response.optJSONArray("favorites")
+                favoriteSongs.clear()
+                if (favoritesArray != null) {
+                    for (i in 0 until favoritesArray.length()) {
+                        val jsonObject = favoritesArray.getJSONObject(i)
+                        val song = Song(
+                            id = jsonObject.getJSONObject("song").getInt("id"),
+                            title = jsonObject.getJSONObject("song").getString("title"),
+                            artist = jsonObject.getJSONObject("song").getString("artist"),
+                            file_path = jsonObject.getJSONObject("song").optString("file_path", null),
+                            quality = jsonObject.getJSONObject("song").optString("quality", null),
+                            trendingScore = jsonObject.getJSONObject("song").optInt("trending_score", 0),
+                            isRecommended = jsonObject.getJSONObject("song").optInt("is_recommended", 0) == 1,
+                            thumbnailUrl = jsonObject.getJSONObject("song").optString("thumbnail_url", null),
+                            albumId = jsonObject.getJSONObject("song").optInt("album_id", 0),
+                            lyrics = jsonObject.getJSONObject("song").optString("lyrics", null)
+                        )
+                        favoriteSongs.add(song)
+                    }
+                }
+                favoriteSongAdapter.notifyDataSetChanged()
+            },
+            { error ->
+                Log.e("FavoriteSongsActivity", "Error fetching favorites: ${error.message}")
+                Log.e("FavoriteSongsActivity", "Network response: ${error.networkResponse?.statusCode}")
+                Log.e("FavoriteSongsActivity", "Error details: ${error.networkResponse?.data?.let { String(it) }}")
+                Toast.makeText(this, "Lỗi lấy danh sách yêu thích: ${error.message ?: "Không xác định"}", Toast.LENGTH_LONG).show()
+            }
+        )
+        requestQueue.add(request)
     }
 
-    override fun onResume() {
-        super.onResume()
-        updateFavoriteSongs() // Cập nhật danh sách yêu thích khi quay lại activity
+    private fun navigateToSongActivity(song: Song) {
+        Log.d("FavoriteSongsActivity", "Song URL before passing to SongActivity: ${song.file_path}")
+        if (song.file_path.isNullOrEmpty()) {
+            Toast.makeText(this, "Không tìm thấy URL bài hát", Toast.LENGTH_SHORT).show()
+        } else {
+            val intent = Intent(this, SongActivity::class.java).apply {
+                putExtra("song_title", song.title)
+                putExtra("song_artist", song.artist)
+                putExtra("song_url", song.file_path)
+                putExtra("song_thumbnail", song.thumbnailUrl)
+                putExtra("song_lyrics", song.lyrics)
+            }
+            startActivity(intent)
+        }
     }
 
-    override fun onSupportNavigateUp(): Boolean {
-        onBackPressed()
-        return true
+    private fun updateFavoriteOnServer(song: Song, isFavorite: Boolean) {
+        if (userId == null || song.id == null) {
+            Log.e("FavoriteSongsActivity", "Invalid userId or songId: userId=$userId, songId=${song.id}")
+            Toast.makeText(this, "Không thể cập nhật yêu thích: Dữ liệu không hợp lệ", Toast.LENGTH_LONG).show()
+            return
+        }
+
+        val url = if (isFavorite) "${MainActivity.BASE_URL}/favorites/add" else "${MainActivity.BASE_URL}/favorites/remove"
+        val requestBody = JSONObject().apply {
+            put("user_id", userId)
+            put("song_id", song.id)
+        }
+
+        val jsonRequest = object : JsonObjectRequest(
+            Request.Method.POST, url, requestBody,
+            { response ->
+                Log.d("FavoriteSongsActivity", "Server response: $response")
+                Toast.makeText(this, response.optString("message", "Cập nhật thành công"), Toast.LENGTH_SHORT).show()
+                updateFavoriteSongsFromServer() // Làm mới danh sách sau khi cập nhật
+            },
+            { error ->
+                Log.e("FavoriteSongsActivity", "Error updating favorite: ${error.message}")
+                Log.e("FavoriteSongsActivity", "Network response: ${error.networkResponse?.statusCode}")
+                Log.e("FavoriteSongsActivity", "Error details: ${error.networkResponse?.data?.let { String(it) }}")
+                Toast.makeText(this, "Lỗi cập nhật yêu thích: ${error.message ?: "Không xác định"}", Toast.LENGTH_LONG).show()
+            }
+        ) {
+            override fun getHeaders(): MutableMap<String, String> {
+                val headers = HashMap<String, String>()
+                headers["Content-Type"] = "application/json"
+                return headers
+            }
+        }
+        requestQueue.add(jsonRequest)
     }
 }
