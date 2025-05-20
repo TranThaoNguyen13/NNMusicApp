@@ -39,13 +39,16 @@
                 <Button
                     android:id="@+id/btnUpgradeVip"
                     android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
+                    android:layout_height="40dp"
                     android:text="Nâng VIP"
                     android:visibility="gone"
                     android:layout_marginEnd="8dp"
-
-                    android:background="#28A745"/>      <!-- chữ màu trắng -->
-
+                    android:textSize="14sp"
+                    android:textColor="#FFFFFF"
+                    android:background="@drawable/upgrade_vip_button_background"
+                    android:elevation="4dp"
+                    android:paddingStart="16dp"
+                    android:paddingEnd="16dp" />
 
                 <ImageButton
                     android:id="@+id/btnFavorite"

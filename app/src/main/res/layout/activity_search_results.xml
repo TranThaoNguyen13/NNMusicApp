@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="vertical"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:padding="16dp">
+
+    <!-- Tiêu đề kết quả bài hát -->
+    <TextView
+        android:id="@+id/tvSongTitle"
+        android:text="Kết quả bài hát"
+        android:textStyle="bold"
+        android:textSize="18sp"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" />
+
+    <!-- Thông báo không có bài hát -->
+    <TextView
+        android:id="@+id/tvNoSongs"
+        android:text="Không có bài hát nào bạn tìm kiếm"
+        android:visibility="gone"
+        android:textColor="#999999"
+        android:padding="8dp"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" />
+
+    <!-- Danh sách bài hát -->
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/rvSongs"
+        android:layout_width="match_parent"
+        android:layout_height="200dp"
+        android:scrollbars="vertical" />
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="16dp" />
+
+    <!-- Tiêu đề kết quả album -->
+    <TextView
+        android:id="@+id/tvAlbumTitle"
+        android:text="Kết quả album"
+        android:textStyle="bold"
+        android:textSize="18sp"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" />
+
+    <!-- Thông báo không có album (ẩn khi không cần) -->
+    <TextView
+        android:id="@+id/tvNoAlbums"
+        android:text="Không có album nào"
+        android:visibility="gone"
+        android:textColor="#999999"
+        android:padding="8dp"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" />
+
+    <!-- Danh sách album -->
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/rvAlbums"
+        android:layout_width="match_parent"
+        android:layout_height="200dp"
+        android:scrollbars="vertical" />
+
+</LinearLayout>

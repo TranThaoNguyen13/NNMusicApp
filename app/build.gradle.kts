@@ -73,7 +73,7 @@ dependencies {
     implementation("com.github.bumptech.glide:glide:4.12.0")
     implementation ("com.squareup.okhttp3:okhttp:4.12.0")
     implementation ("com.google.android.material:material:1.9.0")
-
+//    implementation ("com.github.momo-wallet:mobile-sdk:1.0.7")
 
     // Testing
     testImplementation(libs.junit)

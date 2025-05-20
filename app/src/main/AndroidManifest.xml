@@ -15,7 +15,6 @@
         android:usesCleartextTraffic="true"
         tools:ignore="LockedOrientationActivity">
 
-
         <!-- MainActivity -->
         <activity
             android:name=".MainActivity"
@@ -30,19 +29,46 @@
         <!-- Các Activity khác -->
         <activity
             android:name=".MomoPaymentActivity"
-            android:label="Momo Payment">
-        </activity>
-        <activity android:name=".UpgradeActivity" />
-        <activity android:name=".RegisterActivity" />
-        <activity android:name=".MusicActivity" />
-        <activity android:name=".LoginActivity" />
-        <activity android:name=".AdminActivity" />
-        <activity android:name=".SongActivity" />
-        <activity android:name=".AlbumSongsActivity" />
-        <activity android:name=".FavoriteSongsActivity" />
-        <activity android:name=".admin.ManageUsersActivity" />
-        <activity android:name=".admin.ManageSongsActivity" />
-        <activity android:name=".admin.ManageAlbumsActivity" />
+            android:exported="false"
+            android:label="Momo Payment" />
+        <activity
+            android:name=".UpgradeActivity"
+            android:exported="false" />
+        <activity
+            android:name=".RegisterActivity"
+            android:exported="false" />
+        <activity
+            android:name=".MusicActivity"
+            android:exported="false" />
+        <activity
+            android:name=".LoginActivity"
+            android:exported="false" />
+        <activity
+            android:name=".AdminActivity"
+            android:exported="false" />
+        <activity
+            android:name=".SongActivity"
+            android:exported="false" />
+        <activity
+            android:name=".AlbumSongsActivity"
+            android:exported="false" />
+        <activity
+            android:name=".FavoriteSongsActivity"
+            android:exported="false" />
+        <activity
+            android:name=".admin.ManageUsersActivity"
+            android:exported="false" />
+        <activity
+            android:name=".admin.ManageSongsActivity"
+            android:exported="false" />
+        <activity
+            android:name=".admin.ManageAlbumsActivity"
+            android:exported="false" />
+        <activity
+            android:name=".SimulatedPaymentActivity"
+            android:exported="false" />
+        <activity
+            android:name=".SearchResultsActivity"
+            android:exported="false" />
     </application>
-
 </manifest>
